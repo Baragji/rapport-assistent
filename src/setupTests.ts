@@ -1,0 +1,11 @@
+// This file is used to setup the test environment
+// You can add any global setup code here
+
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+
+// Runs a cleanup after each test case
+afterEach(() => {
+  cleanup();
+});
