@@ -3,6 +3,7 @@
   "name": "Research Methodology",
   "description": "Generate a research methodology section",
   "category": "methodology",
+  "version": "1.0.0",
   "tags": ["methodology", "research", "academic"],
   "template": "Develop a comprehensive methodology section for a research study on {{topic}}. The methodology should include:\n\n1. Research Design: Describe the overall approach ({{researchType}})\n2. Data Collection: Explain how data will be gathered\n3. Sample Selection: Define the target population and sampling method\n4. Analysis Methods: Outline analytical techniques to be used\n5. Ethical Considerations: Address relevant ethical issues\n6. Limitations: Acknowledge potential constraints\n\nEnsure the methodology is rigorous, replicable, and appropriate for addressing the research question: {{researchQuestion}}",
   "parameters": [

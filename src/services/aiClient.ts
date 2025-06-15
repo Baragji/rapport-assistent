@@ -85,10 +85,10 @@ export class AIClient {
     this.config = {
       ...AIClient.DEFAULT_CONFIG,
       ...config,
-      apiKey: config.apiKey || import.meta.env.VITE_OPENAI_API_KEY || AIClient.DEFAULT_CONFIG.apiKey
+      apiKey: config.apiKey !== undefined ? config.apiKey : (import.meta.env.VITE_OPENAI_API_KEY || AIClient.DEFAULT_CONFIG.apiKey)
     };
     
-    if (!this.config.apiKey) {
+    if (!this.config.apiKey || this.config.apiKey.trim() === '') {
       console.error('OpenAI API key is missing. Please set VITE_OPENAI_API_KEY in your .env file.');
     }
     
@@ -298,7 +298,7 @@ export class AIClient {
         );
       }
       
-      if (status === 408 || error.message.includes('timeout')) {
+      if (status === 408 || error.message.includes('timeout') || error.message.includes('timed out')) {
         return new AIError(
           'Request timed out: Please try again later',
           AIErrorType.TIMEOUT,

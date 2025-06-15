@@ -3,8 +3,7 @@
  * This provides a cleaner separation between code and prompt templates
  */
 
-import type { PromptTemplate } from '../services/promptService';
-import { TemplateCategory } from '../services/promptService';
+import type { PromptTemplate, TemplateCategoryType } from '../services/promptService';
 
 // Import JSON templates (these will be bundled but separated from code)
 import introductionTemplate from './templates/introduction.json';
@@ -25,7 +24,7 @@ export const templateRegistry: PromptTemplate[] = [
     id: 'analysis-data',
     name: 'Data Analysis',
     description: 'Generate data analysis and findings section',
-    category: TemplateCategory.ANALYSIS,
+    category: 'analysis' as TemplateCategoryType,
     version: '1.0.0',
     tags: ['analysis', 'data', 'findings'],
     template: `Create a comprehensive data analysis section for a research study on {{topic}}. The analysis should:
@@ -49,7 +48,7 @@ Use clear, objective language and support all claims with evidence from the data
     id: 'improve-clarity',
     name: 'Improve Text Clarity',
     description: 'Improve the clarity and readability of text',
-    category: TemplateCategory.GENERAL,
+    category: 'general' as TemplateCategoryType,
     version: '1.0.0',
     tags: ['clarity', 'improvement', 'editing'],
     template: `Improve the clarity, readability, and flow of the following text while maintaining its original meaning and academic tone:
@@ -87,7 +86,7 @@ export function getTemplateById(id: string): PromptTemplate | undefined {
 /**
  * Get templates by category
  */
-export function getTemplatesByCategory(category: string): PromptTemplate[] {
+export function getTemplatesByCategory(category: TemplateCategoryType): PromptTemplate[] {
   return templateRegistry.filter(template => template.category === category);
 }
 

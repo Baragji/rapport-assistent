@@ -3,6 +3,7 @@
   "name": "Red Thread Analysis",
   "description": "Generate 'rød tråd' (red thread) suggestions for report coherence",
   "category": "analysis",
+  "version": "1.0.0",
   "tags": ["red-thread", "coherence", "structure", "norwegian"],
   "template": "Analyze the following report content and provide 'rød tråd' (red thread) suggestions to improve coherence and flow:\n\nTitle: {{title}}\nContent: {{content}}\n\nProvide specific recommendations for:\n1. Logical flow between sections\n2. Connecting themes and arguments\n3. Transitional phrases and sentences\n4. Overall narrative coherence\n5. Strengthening the central argument\n\nFocus on creating a clear, unified narrative that guides the reader through the report's main points.",
   "parameters": [

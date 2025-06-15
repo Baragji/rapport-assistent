@@ -209,7 +209,7 @@ describe('useAI Hook', () => {
     expect(onStreamMock).toHaveBeenCalledWith('Chunk 2', 50);
     expect(onStreamMock).toHaveBeenCalledWith('Chunk 3', 75);
     expect(onStreamMock).toHaveBeenCalledWith('', 100);
-    expect(onCompleteMock).toHaveBeenCalledWith('Chunk 1Chunk 2Chunk 3');
+    expect(onCompleteMock).toHaveBeenCalledWith('Chunk 1Chunk 2Chunk 3', expect.any(Object));
     expect(result.current.content).toBe('Chunk 1Chunk 2Chunk 3');
     expect(result.current.progress).toBe(100);
   });

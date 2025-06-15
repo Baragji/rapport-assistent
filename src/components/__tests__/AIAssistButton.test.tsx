@@ -1,6 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import AIAssistButton from '../AIAssistButton';
+import AIFeedback from '../AIFeedback';
+
+// Mock the AIFeedback component
+vi.mock('../AIFeedback', () => ({
+  default: vi.fn(() => <div data-testid="mock-ai-feedback">Feedback UI</div>)
+}));
 
 // Mock the useAI hook with a factory function to allow different states
 const createMockUseAI = (options: {
@@ -10,13 +16,24 @@ const createMockUseAI = (options: {
   progress?: number;
   generatedContent?: string;
   generatedPrompt?: string;
+  onCompleteCallback?: (content: string, metadata?: Record<string, unknown>) => void;
 } = {}) => {
   return {
     content: options.content || '',
     isLoading: options.isLoading || false,
     error: options.error || null,
     progress: options.progress || 0,
-    generateContent: vi.fn().mockResolvedValue(options.generatedContent || 'Generated content'),
+    generateContent: vi.fn().mockImplementation(async (templateId, params) => {
+      const content = options.generatedContent || 'Generated content';
+      if (options.onCompleteCallback) {
+        options.onCompleteCallback(content, {
+          contentId: `${templateId}-123456`,
+          templateId,
+          params
+        });
+      }
+      return content;
+    }),
     generateFromPrompt: vi.fn().mockResolvedValue(options.generatedPrompt || 'Generated from prompt'),
     reset: vi.fn()
   };
@@ -24,10 +41,16 @@ const createMockUseAI = (options: {
 
 // Mock the useAI hook
 vi.mock('../../hooks/useAI', () => ({
-  useAI: () => createMockUseAI({
-    isLoading: false,
-    error: null
-  })
+  useAI: (options: { onComplete?: (content: string, metadata?: Record<string, unknown>) => void }) => {
+    // Store the onComplete callback to call it later
+    const onCompleteCallback = options?.onComplete;
+    
+    return createMockUseAI({
+      isLoading: false,
+      error: null,
+      onCompleteCallback
+    });
+  }
 }));
 
 describe('AIAssistButton', () => {
@@ -173,5 +196,93 @@ describe('AIAssistButton', () => {
     // Skip this test for now
     // The mocking approach doesn't work well with the current implementation
     // We'll need to revisit this in a future update
+  });
+  
+  it('shows feedback UI when showFeedback is true and content is generated', async () => {
+    // Create a mock implementation that will call the onComplete callback
+    const mockOnContentGenerated = vi.fn();
+    
+    render(
+      <AIAssistButton
+        templateId={mockTemplateId}
+        templateParams={mockTemplateParams}
+        onContentGenerated={mockOnContentGenerated}
+        showFeedback={true}
+      />
+    );
+    
+    // Simulate clicking the button to generate content
+    const button = screen.getByTestId('ai-assist-button');
+    fireEvent.click(button);
+    
+    // Wait for the feedback UI to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-ai-feedback')).toBeInTheDocument();
+    });
+    
+    // Verify that the onContentGenerated callback was called
+    expect(mockOnContentGenerated).toHaveBeenCalledWith('Generated content');
+  });
+  
+  it('does not show feedback UI when showFeedback is false', async () => {
+    const mockOnContentGenerated = vi.fn();
+    
+    render(
+      <AIAssistButton
+        templateId={mockTemplateId}
+        templateParams={mockTemplateParams}
+        onContentGenerated={mockOnContentGenerated}
+        showFeedback={false}
+      />
+    );
+    
+    // Simulate clicking the button to generate content
+    const button = screen.getByTestId('ai-assist-button');
+    fireEvent.click(button);
+    
+    // Wait for the content to be generated
+    await waitFor(() => {
+      expect(mockOnContentGenerated).toHaveBeenCalled();
+    });
+    
+    // Verify that the feedback UI is not shown
+    expect(screen.queryByTestId('mock-ai-feedback')).not.toBeInTheDocument();
+  });
+  
+  it('passes correct props to AIFeedback component', async () => {
+    const mockOnContentGenerated = vi.fn();
+    
+    render(
+      <AIAssistButton
+        templateId={mockTemplateId}
+        templateParams={mockTemplateParams}
+        onContentGenerated={mockOnContentGenerated}
+        showFeedback={true}
+        references={[{ title: 'Test Reference', author: 'Test Author' }]}
+      />
+    );
+    
+    // Simulate clicking the button to generate content
+    const button = screen.getByTestId('ai-assist-button');
+    fireEvent.click(button);
+    
+    // Wait for the feedback UI to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-ai-feedback')).toBeInTheDocument();
+    });
+    
+    // Verify that AIFeedback was called with the correct props
+    expect(AIFeedback).toHaveBeenCalled();
+    
+    // Get the first call arguments
+    const callArgs = vi.mocked(AIFeedback).mock.calls[0][0];
+    
+    // Check individual properties
+    expect(callArgs.contentId).toContain(mockTemplateId);
+    expect(callArgs.templateId).toBe(mockTemplateId);
+    expect(callArgs.metadata?.templateParams).toEqual(mockTemplateParams);
+    expect(callArgs.metadata?.references).toEqual([
+      { title: 'Test Reference', author: 'Test Author' }
+    ]);
   });
 });

@@ -1,212 +1,378 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PromptService, TemplateCategory } from '../promptService';
-import type { PromptTemplate } from '../promptService';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { PromptService, TemplateCategory, type PromptTemplate } from '../promptService';
 import { AIClient } from '../aiClient';
 
 // Mock the AIClient
-vi.mock('../aiClient', () => {
-  return {
-    AIClient: vi.fn().mockImplementation(() => ({
-      generateContent: vi.fn().mockResolvedValue('Generated content')
-    }))
-  };
-});
+vi.mock('../aiClient', () => ({
+  AIClient: vi.fn().mockImplementation(() => ({
+    generateContent: vi.fn(),
+    generateContentStream: vi.fn()
+  }))
+}));
+
+// Mock the templateRegistry
+vi.mock('../../prompts/templateRegistry', () => ({
+  templateRegistry: [
+    {
+      id: 'test-template-1',
+      name: 'Test Template 1',
+      description: 'A test template',
+      category: 'introduction',
+      version: '1.0.0',
+      tags: ['test', 'introduction'],
+      template: 'This is a {{test}} template'
+    },
+    {
+      id: 'test-template-2',
+      name: 'Test Template 2',
+      description: 'Another test template',
+      category: 'methodology',
+      version: '1.0.0',
+      tags: ['test', 'methodology'],
+      template: 'This is another {{test}} template'
+    }
+  ]
+}));
 
 describe('PromptService', () => {
   let promptService: PromptService;
-  let mockAiClient: AIClient;
+  let mockAIClient: AIClient;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
   
   beforeEach(() => {
-    // Create a new instance for each test
-    mockAiClient = new AIClient();
-    promptService = new PromptService(mockAiClient);
+    // Reset mocks
+    vi.clearAllMocks();
+    
+    // Create a mock AIClient
+    mockAIClient = new AIClient();
+    
+    // Create a new PromptService instance with the mock AIClient
+    promptService = new PromptService(mockAIClient);
+    
+    // Spy on console methods
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
   
-  describe('initialization', () => {
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+  });
+  
+  describe('constructor', () => {
     it('should initialize with default templates', () => {
-      const templates = promptService.getAllTemplates();
-      expect(templates.length).toBeGreaterThan(0);
-      
-      // Check that we have templates in different categories
-      const introTemplates = promptService.getTemplatesByCategory(TemplateCategory.INTRODUCTION);
-      const methodologyTemplates = promptService.getTemplatesByCategory(TemplateCategory.METHODOLOGY);
-      
-      expect(introTemplates.length).toBeGreaterThan(0);
-      expect(methodologyTemplates.length).toBeGreaterThan(0);
+      expect(promptService.getAllTemplates().length).toBe(2);
+      expect(promptService.getTemplate('test-template-1')).toBeDefined();
+      expect(promptService.getTemplate('test-template-2')).toBeDefined();
     });
   });
   
-  describe('template management', () => {
+  describe('registerTemplate', () => {
     it('should register a new template', () => {
       const newTemplate: PromptTemplate = {
-        id: 'test-template',
-        name: 'Test Template',
-        description: 'A test template',
+        id: 'new-template',
+        name: 'New Template',
+        description: 'A new template',
         category: TemplateCategory.GENERAL,
         version: '1.0.0',
-        tags: ['test'],
-        template: 'This is a {{test}} template'
+        tags: ['new'],
+        template: 'This is a new template'
       };
       
       const result = promptService.registerTemplate(newTemplate);
-      expect(result).toBe(true);
       
-      const retrievedTemplate = promptService.getTemplate('test-template');
-      expect(retrievedTemplate).toEqual(newTemplate);
+      expect(result).toBe(true);
+      expect(promptService.getTemplate('new-template')).toEqual(newTemplate);
     });
     
-    it('should not register a template without an ID', () => {
+    it('should update an existing template', () => {
+      const updatedTemplate: PromptTemplate = {
+        id: 'test-template-1',
+        name: 'Updated Template',
+        description: 'An updated template',
+        category: TemplateCategory.GENERAL,
+        version: '1.1.0',
+        tags: ['updated'],
+        template: 'This is an updated template'
+      };
+      
+      const result = promptService.registerTemplate(updatedTemplate);
+      
+      expect(result).toBe(true);
+      expect(promptService.getTemplate('test-template-1')).toEqual(updatedTemplate);
+    });
+    
+    it('should reject templates without an ID', () => {
       const invalidTemplate = {
         name: 'Invalid Template',
         description: 'A template without an ID',
         category: TemplateCategory.GENERAL,
         version: '1.0.0',
-        tags: ['test'],
+        tags: ['invalid'],
         template: 'This is an invalid template'
       } as PromptTemplate;
       
       const result = promptService.registerTemplate(invalidTemplate);
+      
       expect(result).toBe(false);
-    });
-    
-    it('should get templates by category', () => {
-      const generalTemplates = promptService.getTemplatesByCategory(TemplateCategory.GENERAL);
-      expect(generalTemplates.length).toBeGreaterThan(0);
-      expect(generalTemplates.every(t => t.category === TemplateCategory.GENERAL)).toBe(true);
-    });
-    
-    it('should get templates by tag', () => {
-      // Register a template with a specific tag for testing
-      const taggedTemplate: PromptTemplate = {
-        id: 'tagged-template',
-        name: 'Tagged Template',
-        description: 'A template with a specific tag',
-        category: TemplateCategory.GENERAL,
-        version: '1.0.0',
-        tags: ['specific-tag'],
-        template: 'This is a template with a specific tag'
-      };
-      
-      promptService.registerTemplate(taggedTemplate);
-      
-      const templates = promptService.getTemplatesByTag('specific-tag');
-      expect(templates.length).toBe(1);
-      expect(templates[0].id).toBe('tagged-template');
-    });
-  });
-  
-  describe('template filling', () => {
-    it('should fill a template with parameters', () => {
-      // Register a test template
-      const testTemplate: PromptTemplate = {
-        id: 'param-test',
-        name: 'Parameter Test',
-        description: 'A template for testing parameter filling',
-        category: TemplateCategory.GENERAL,
-        version: '1.0.0',
-        tags: ['test'],
-        template: 'Hello {{name}}, welcome to {{place}}!'
-      };
-      
-      promptService.registerTemplate(testTemplate);
-      
-      const filled = promptService.fillTemplate('param-test', {
-        name: 'John',
-        place: 'Wonderland'
-      });
-      
-      expect(filled).toBe('Hello John, welcome to Wonderland!');
-    });
-    
-    it('should return null if template is not found', () => {
-      const filled = promptService.fillTemplate('non-existent-template', {
-        param: 'value'
-      });
-      
-      expect(filled).toBeNull();
-    });
-    
-    it('should handle missing parameters', () => {
-      // Register a test template
-      const testTemplate: PromptTemplate = {
-        id: 'missing-param-test',
-        name: 'Missing Parameter Test',
-        description: 'A template for testing missing parameters',
-        category: TemplateCategory.GENERAL,
-        version: '1.0.0',
-        tags: ['test'],
-        template: 'Hello {{name}}, welcome to {{place}}!'
-      };
-      
-      promptService.registerTemplate(testTemplate);
-      
-      // Only provide one parameter
-      const filled = promptService.fillTemplate('missing-param-test', {
-        name: 'John'
-      });
-      
-      // The missing parameter should remain as {{place}}
-      expect(filled).toBe('Hello John, welcome to {{place}}!');
-    });
-  });
-  
-  describe('content generation', () => {
-    it('should generate content using a template', async () => {
-      // Register a test template
-      const testTemplate: PromptTemplate = {
-        id: 'generation-test',
-        name: 'Generation Test',
-        description: 'A template for testing content generation',
-        category: TemplateCategory.GENERAL,
-        version: '1.0.0',
-        tags: ['test'],
-        template: 'Generate content about {{topic}}'
-      };
-      
-      promptService.registerTemplate(testTemplate);
-      
-      const content = await promptService.generateContent('generation-test', {
-        topic: 'artificial intelligence'
-      });
-      
-      // The mock AIClient should return 'Generated content'
-      expect(content).toBe('Generated content');
-      
-      // Verify that the AIClient was called with the filled template
-      expect(mockAiClient.generateContent).toHaveBeenCalledWith(
-        'Generate content about artificial intelligence'
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Template must have an ID and template text'
       );
     });
     
-    it('should return null if template filling fails', async () => {
-      const content = await promptService.generateContent('non-existent-template', {
-        param: 'value'
-      });
+    it('should reject templates without template text', () => {
+      const invalidTemplate = {
+        id: 'invalid-template',
+        name: 'Invalid Template',
+        description: 'A template without template text',
+        category: TemplateCategory.GENERAL,
+        version: '1.0.0',
+        tags: ['invalid']
+      } as PromptTemplate;
       
-      expect(content).toBeNull();
-      expect(mockAiClient.generateContent).not.toHaveBeenCalled();
+      const result = promptService.registerTemplate(invalidTemplate);
+      
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Template must have an ID and template text'
+      );
+    });
+  });
+  
+  describe('getTemplate', () => {
+    it('should return a template by ID', () => {
+      const template = promptService.getTemplate('test-template-1');
+      
+      expect(template).toBeDefined();
+      expect(template?.id).toBe('test-template-1');
     });
     
-    it('should handle errors from the AI client', async () => {
-      // Mock the AIClient to throw an error
-      vi.mocked(mockAiClient.generateContent).mockRejectedValueOnce(new Error('AI error'));
+    it('should return undefined for non-existent templates', () => {
+      const template = promptService.getTemplate('non-existent');
       
-      // Register a test template
-      const testTemplate: PromptTemplate = {
-        id: 'error-test',
-        name: 'Error Test',
-        description: 'A template for testing error handling',
+      expect(template).toBeUndefined();
+    });
+  });
+  
+  describe('getAllTemplates', () => {
+    it('should return all templates', () => {
+      const templates = promptService.getAllTemplates();
+      
+      expect(templates.length).toBe(2);
+      expect(templates[0].id).toBe('test-template-1');
+      expect(templates[1].id).toBe('test-template-2');
+    });
+  });
+  
+  describe('getTemplatesByCategory', () => {
+    it('should return templates by category', () => {
+      const introTemplates = promptService.getTemplatesByCategory(TemplateCategory.INTRODUCTION);
+      const methTemplates = promptService.getTemplatesByCategory(TemplateCategory.METHODOLOGY);
+      const analysisTemplates = promptService.getTemplatesByCategory(TemplateCategory.ANALYSIS);
+      
+      expect(introTemplates.length).toBe(1);
+      expect(introTemplates[0].id).toBe('test-template-1');
+      
+      expect(methTemplates.length).toBe(1);
+      expect(methTemplates[0].id).toBe('test-template-2');
+      
+      expect(analysisTemplates.length).toBe(0);
+    });
+  });
+  
+  describe('getTemplatesByTag', () => {
+    it('should return templates by tag', () => {
+      const testTemplates = promptService.getTemplatesByTag('test');
+      const introTemplates = promptService.getTemplatesByTag('introduction');
+      const methTemplates = promptService.getTemplatesByTag('methodology');
+      const nonExistentTemplates = promptService.getTemplatesByTag('non-existent');
+      
+      expect(testTemplates.length).toBe(2);
+      expect(introTemplates.length).toBe(1);
+      expect(introTemplates[0].id).toBe('test-template-1');
+      expect(methTemplates.length).toBe(1);
+      expect(methTemplates[0].id).toBe('test-template-2');
+      expect(nonExistentTemplates.length).toBe(0);
+    });
+  });
+  
+  describe('fillTemplate', () => {
+    it('should fill a template with parameters', () => {
+      const filled = promptService.fillTemplate('test-template-1', { test: 'sample' });
+      
+      expect(filled).toBe('This is a sample template');
+    });
+    
+    it('should handle multiple parameters', () => {
+      // Register a template with multiple parameters
+      promptService.registerTemplate({
+        id: 'multi-param',
+        name: 'Multi Parameter Template',
+        description: 'A template with multiple parameters',
         category: TemplateCategory.GENERAL,
         version: '1.0.0',
         tags: ['test'],
-        template: 'This will cause an error'
-      };
+        template: 'Hello {{name}}, welcome to {{place}}!'
+      });
       
-      promptService.registerTemplate(testTemplate);
+      const filled = promptService.fillTemplate('multi-param', { 
+        name: 'John', 
+        place: 'Paris' 
+      });
       
-      const content = await promptService.generateContent('error-test', {});
+      expect(filled).toBe('Hello John, welcome to Paris!');
+    });
+    
+    it('should return null for non-existent templates', () => {
+      const filled = promptService.fillTemplate('non-existent', { test: 'sample' });
+      
+      expect(filled).toBeNull();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Template with ID non-existent not found'
+      );
+    });
+    
+    it('should warn about unreplaced parameters', () => {
+      const filled = promptService.fillTemplate('test-template-1', {});
+      
+      expect(filled).toBe('This is a {{test}} template');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Some parameters were not replaced: {{test}}'
+      );
+    });
+    
+    it('should handle null and undefined parameter values', () => {
+      const filled = promptService.fillTemplate('test-template-1', { 
+        test: null,
+        other: undefined 
+      });
+      
+      expect(filled).toBe('This is a {{test}} template');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Some parameters were not replaced: {{test}}'
+      );
+    });
+    
+    it('should convert non-string parameter values to strings', () => {
+      // Register a template with numeric and boolean parameters
+      promptService.registerTemplate({
+        id: 'mixed-types',
+        name: 'Mixed Types Template',
+        description: 'A template with different parameter types',
+        category: TemplateCategory.GENERAL,
+        version: '1.0.0',
+        tags: ['test'],
+        template: 'Count: {{count}}, Active: {{active}}'
+      });
+      
+      const filled = promptService.fillTemplate('mixed-types', { 
+        count: 42, 
+        active: true 
+      });
+      
+      expect(filled).toBe('Count: 42, Active: true');
+    });
+  });
+  
+  describe('generateContent', () => {
+    it('should generate content using a template', async () => {
+      // Mock the AIClient.generateContent method
+      vi.mocked(mockAIClient.generateContent).mockResolvedValue('Generated content');
+      
+      const content = await promptService.generateContent('test-template-1', { test: 'sample' });
+      
+      expect(content).toBe('Generated content');
+      expect(mockAIClient.generateContent).toHaveBeenCalledWith('This is a sample template');
+    });
+    
+    it('should return null if template is not found', async () => {
+      const content = await promptService.generateContent('non-existent', { test: 'sample' });
       
       expect(content).toBeNull();
+      expect(mockAIClient.generateContent).not.toHaveBeenCalled();
+    });
+    
+    it('should handle errors during content generation', async () => {
+      vi.mocked(mockAIClient.generateContent).mockRejectedValue(new Error('API error'));
+      
+      const content = await promptService.generateContent('test-template-1', { test: 'sample' });
+      
+      expect(content).toBeNull();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error generating content from template:',
+        expect.any(Error)
+      );
+    });
+    
+    it('should use streaming when enabled', async () => {
+      // Mock the streaming function to call the callback with chunks
+      vi.mocked(mockAIClient.generateContentStream).mockImplementation(async (_prompt: string, callback?: (chunk: string, progress: number) => void) => {
+        if (callback) {
+          callback('Chunk 1', 25);
+          callback('Chunk 2', 50);
+          callback('Chunk 3', 75);
+          callback('', 100);
+        }
+        return 'Chunk 1Chunk 2Chunk 3';
+      });
+      
+      const onStreamMock = vi.fn();
+      
+      const content = await promptService.generateContent(
+        'test-template-1', 
+        { test: 'sample' },
+        true,
+        onStreamMock
+      );
+      
+      expect(content).toBe('Chunk 1Chunk 2Chunk 3');
+      expect(mockAIClient.generateContentStream).toHaveBeenCalledWith(
+        'This is a sample template',
+        expect.any(Function)
+      );
+      expect(onStreamMock).toHaveBeenCalledTimes(4);
+      expect(onStreamMock).toHaveBeenCalledWith('Chunk 1', 25);
+      expect(onStreamMock).toHaveBeenCalledWith('Chunk 2', 50);
+      expect(onStreamMock).toHaveBeenCalledWith('Chunk 3', 75);
+      expect(onStreamMock).toHaveBeenCalledWith('', 100);
+    });
+  });
+  
+  describe('singleton instance', () => {
+    it('should export a singleton instance', async () => {
+      // Import the singleton
+      const { promptService: singletonService } = await import('../promptService');
+      
+      expect(singletonService).toBeInstanceOf(PromptService);
+    });
+    
+    it('should export the singleton as default', async () => {
+      // Import the default export
+      const defaultExport = await import('../promptService');
+      
+      expect(defaultExport.default).toBe(defaultExport.promptService);
+    });
+    
+    it('should use a mock client in test mode', async () => {
+      // Save original env
+      const originalEnv = { ...import.meta.env };
+      
+      // Mock environment variable
+      vi.stubGlobal('import.meta.env', {
+        ...import.meta.env,
+        MODE: 'test'
+      });
+      
+      // Re-import to trigger the test mode code path
+      const { promptService: testService } = await import('../promptService');
+      
+      // Test the mock client
+      const result = await testService.generateContent('test-template-1', { test: 'sample' });
+      expect(result).toContain('Generated content for:');
+      
+      // Restore original env
+      vi.stubGlobal('import.meta.env', originalEnv);
     });
   });
 });

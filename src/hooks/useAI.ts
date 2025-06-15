@@ -1,8 +1,10 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { getAIClient } from '../services/aiClientLazy';
-import type { AIClient, AIError, AIErrorType } from '../services/aiClient';
+import type { AIClient, AIError } from '../services/aiClient';
 import { promptService } from '../services/promptService';
 import type { TemplateParams } from '../services/promptService';
+import { performanceMonitor } from '../utils/performanceMonitor';
+import { getFeatureFlag } from '../utils/featureFlags';
 
 /**
  * Interface for the useAI hook return value
@@ -66,7 +68,7 @@ export interface UseAIOptions {
   /**
    * Callback for when generation is complete
    */
-  onComplete?: (content: string) => void;
+  onComplete?: (content: string, metadata?: Record<string, unknown>) => void;
   
   /**
    * Callback for when an error occurs
@@ -95,7 +97,14 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     }
     
     if (!clientRef.current) {
-      clientRef.current = await getAIClient();
+      // Use lazy loading if feature flag is enabled
+      if (getFeatureFlag('AI_LAZY_LOADING')) {
+        clientRef.current = await getAIClient();
+      } else {
+        // Fallback to direct import for rollback scenarios
+        const { AIClient } = await import('../services/aiClient');
+        clientRef.current = new AIClient();
+      }
     }
     
     return clientRef.current;
@@ -121,6 +130,13 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     setIsLoading(true);
     setError(null);
     setProgress(0);
+    
+    const startTime = performance.now();
+    
+    // Only use performance monitoring if feature flag is enabled
+    if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+      performanceMonitor.startMetric(`ai-template-${templateId}`, { templateId, params });
+    }
     
     try {
       // Get the AI client instance
@@ -157,8 +173,28 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
         setProgress(100);
       }
       
-      // Call onComplete callback
-      options.onComplete?.(result);
+      // Track successful operation if monitoring is enabled
+      if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+        const duration = performance.now() - startTime;
+        performanceMonitor.trackAIOperation(
+          'generate',
+          templateId,
+          duration,
+          true,
+          undefined,
+          result.length
+        );
+      }
+      
+      // Call onComplete callback with metadata
+      const metadata = {
+        contentId: `${templateId}-${Date.now()}`,
+        templateId,
+        params,
+        timestamp: new Date().toISOString(),
+        responseLength: result.length,
+      };
+      options.onComplete?.(result, metadata);
       
       return result;
     } catch (err) {
@@ -172,12 +208,29 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
             err
           );
       
+      // Track failed operation if monitoring is enabled
+      if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+        const duration = performance.now() - startTime;
+        performanceMonitor.trackAIOperation(
+          'generate',
+          templateId,
+          duration,
+          false,
+          aiError.message
+        );
+      }
+      
       setError(aiError.message);
       options.onError?.(aiError);
       
       throw aiError;
     } finally {
       setIsLoading(false);
+      
+      // End performance monitoring if enabled
+      if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+        performanceMonitor.endMetric(`ai-template-${templateId}`);
+      }
     }
   }, [getClient, options]);
   
@@ -188,6 +241,13 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     setIsLoading(true);
     setError(null);
     setProgress(0);
+    
+    const startTime = performance.now();
+    
+    // Only use performance monitoring if feature flag is enabled
+    if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+      performanceMonitor.startMetric('ai-raw-prompt', { promptLength: prompt.length });
+    }
     
     try {
       // Get the AI client instance
@@ -212,8 +272,27 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
         setProgress(100);
       }
       
-      // Call onComplete callback
-      options.onComplete?.(result);
+      // Track successful operation if monitoring is enabled
+      if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+        const duration = performance.now() - startTime;
+        performanceMonitor.trackAIOperation(
+          'generate',
+          'raw-prompt',
+          duration,
+          true,
+          undefined,
+          result.length
+        );
+      }
+      
+      // Call onComplete callback with metadata
+      const metadata = {
+        contentId: `raw-prompt-${Date.now()}`,
+        promptLength: prompt.length,
+        timestamp: new Date().toISOString(),
+        responseLength: result.length,
+      };
+      options.onComplete?.(result, metadata);
       
       return result;
     } catch (err) {
@@ -227,12 +306,29 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
             err
           );
       
+      // Track failed operation if monitoring is enabled
+      if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+        const duration = performance.now() - startTime;
+        performanceMonitor.trackAIOperation(
+          'generate',
+          'raw-prompt',
+          duration,
+          false,
+          aiError.message
+        );
+      }
+      
       setError(aiError.message);
       options.onError?.(aiError);
       
       throw aiError;
     } finally {
       setIsLoading(false);
+      
+      // End performance monitoring if enabled
+      if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
+        performanceMonitor.endMetric('ai-raw-prompt');
+      }
     }
   }, [getClient, options]);
   

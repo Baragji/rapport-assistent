@@ -3,6 +3,7 @@
   "name": "Academic Introduction",
   "description": "Generate an academic introduction for research reports",
   "category": "introduction",
+  "version": "1.0.0",
   "tags": ["academic", "research", "introduction"],
   "template": "Write a comprehensive academic introduction for a research report on {{topic}}. The introduction should:\n\n1. Provide background context on {{topic}}\n2. Establish the significance of the research question: {{researchQuestion}}\n3. Outline the scope and objectives of the study\n4. Present a clear thesis statement\n\nThe tone should be formal and scholarly, appropriate for an academic audience. Length should be approximately 200-300 words.",
   "parameters": [

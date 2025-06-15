@@ -3,17 +3,85 @@
  * Provides mocks and helpers for testing AI functionality
  */
 
-import type { AIClient, AIError } from '../services/aiClient';
 import { AIErrorType } from '../services/aiClient';
+import { vi } from 'vitest';
 
 /**
  * Mock AI client for testing
  */
-export class MockAIClient implements AIClient {
+export class MockAIClient {
+  public generateContent = vi.fn();
+  public generateContentStream = vi.fn();
+  public checkAvailability = vi.fn();
+
   private shouldFail = false;
   private failureType: keyof typeof AIErrorType = 'UNKNOWN';
   private responseDelay = 0;
   private streamChunks: string[] = [];
+
+  constructor() {
+    this.setupDefaultBehavior();
+  }
+
+  private setupDefaultBehavior(): void {
+    this.generateContent.mockImplementation(async (prompt: string) => {
+      if (this.responseDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.responseDelay));
+      }
+
+      if (this.shouldFail) {
+        const { AIError } = await import('../services/aiClient');
+        throw new AIError(
+          `Mock error: ${this.failureType}`,
+          AIErrorType[this.failureType],
+          this.failureType === 'RATE_LIMIT' || this.failureType === 'SERVER'
+        );
+      }
+
+      return `Generated response for: ${prompt.substring(0, 50)}...`;
+    });
+
+    this.generateContentStream.mockImplementation(async (
+      _prompt: string,
+      onStream?: (chunk: string, progress: number) => void
+    ) => {
+      if (this.responseDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.responseDelay));
+      }
+
+      if (this.shouldFail) {
+        const { AIError } = await import('../services/aiClient');
+        throw new AIError(
+          `Mock streaming error: ${this.failureType}`,
+          AIErrorType[this.failureType],
+          this.failureType === 'RATE_LIMIT' || this.failureType === 'SERVER'
+        );
+      }
+
+      const chunks = this.streamChunks.length > 0 
+        ? this.streamChunks 
+        : ['Generated ', 'streaming ', 'response ', 'for prompt'];
+
+      let fullContent = '';
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        fullContent += chunk;
+        const progress = Math.round(((i + 1) / chunks.length) * 100);
+        
+        if (onStream) {
+          onStream(chunk, progress);
+        }
+        
+        // Small delay between chunks to simulate streaming
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      return fullContent;
+    });
+
+    this.checkAvailability.mockResolvedValue(true);
+  }
 
   /**
    * Configure the mock to simulate failures
@@ -21,6 +89,7 @@ export class MockAIClient implements AIClient {
   setFailure(shouldFail: boolean, type: keyof typeof AIErrorType = 'UNKNOWN'): void {
     this.shouldFail = shouldFail;
     this.failureType = type;
+    this.setupDefaultBehavior(); // Refresh behavior
   }
 
   /**
@@ -28,6 +97,7 @@ export class MockAIClient implements AIClient {
    */
   setDelay(ms: number): void {
     this.responseDelay = ms;
+    this.setupDefaultBehavior(); // Refresh behavior
   }
 
   /**
@@ -35,66 +105,7 @@ export class MockAIClient implements AIClient {
    */
   setStreamChunks(chunks: string[]): void {
     this.streamChunks = chunks;
-  }
-
-  async generateContent(prompt: string): Promise<string> {
-    if (this.responseDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, this.responseDelay));
-    }
-
-    if (this.shouldFail) {
-      const { AIError } = await import('../services/aiClient');
-      throw new AIError(
-        `Mock error: ${this.failureType}`,
-        AIErrorType[this.failureType],
-        this.failureType === 'RATE_LIMIT' || this.failureType === 'SERVER'
-      );
-    }
-
-    return `Generated response for: ${prompt.substring(0, 50)}...`;
-  }
-
-  async generateContentStream(
-    prompt: string,
-    onStream?: (chunk: string, progress: number) => void
-  ): Promise<string> {
-    if (this.responseDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, this.responseDelay));
-    }
-
-    if (this.shouldFail) {
-      const { AIError } = await import('../services/aiClient');
-      throw new AIError(
-        `Mock streaming error: ${this.failureType}`,
-        AIErrorType[this.failureType],
-        this.failureType === 'RATE_LIMIT' || this.failureType === 'SERVER'
-      );
-    }
-
-    const chunks = this.streamChunks.length > 0 
-      ? this.streamChunks 
-      : ['Generated ', 'streaming ', 'response ', 'for prompt'];
-
-    let fullContent = '';
-    
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      fullContent += chunk;
-      const progress = Math.round(((i + 1) / chunks.length) * 100);
-      
-      if (onStream) {
-        onStream(chunk, progress);
-      }
-      
-      // Small delay between chunks to simulate streaming
-      await new Promise(resolve => setTimeout(resolve, 10));
-    }
-
-    return fullContent;
-  }
-
-  async checkAvailability(): Promise<boolean> {
-    return !this.shouldFail;
+    this.setupDefaultBehavior(); // Refresh behavior
   }
 }
 

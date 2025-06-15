@@ -168,12 +168,7 @@ class PerformanceMonitor {
   /**
    * Export metrics for analysis
    */
-  exportMetrics(): {
-    timestamp: number;
-    aiMetrics: AIOperationMetric[];
-    systemHealth: ReturnType<typeof this.getSystemHealth>;
-    stats: ReturnType<typeof this.getAIStats>;
-  } {
+  exportMetrics() {
     return {
       timestamp: Date.now(),
       aiMetrics: [...this.aiMetrics],

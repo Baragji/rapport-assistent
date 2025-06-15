@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAI } from '../hooks/useAI';
+import AIFeedback from './AIFeedback';
 
 export interface AIAssistButtonProps {
   /**
@@ -73,6 +74,11 @@ export interface AIAssistButtonProps {
     publisher?: string;
     type?: string;
   }>;
+  
+  /**
+   * Whether to show feedback UI after content generation
+   */
+  showFeedback?: boolean;
 }
 
 /**
@@ -92,8 +98,11 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
   testId = 'ai-assist-button',
   streaming = true,
   references = [],
+  showFeedback = false,
 }) => {
   const [progress, setProgress] = useState(0);
+  const [contentId, setContentId] = useState<string>('');
+  const [showFeedbackUI, setShowFeedbackUI] = useState(false);
   
   // Use the AI hook for content generation
   const {
@@ -107,13 +116,26 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
     onStream: (_chunk, progress) => {
       setProgress(progress);
     },
-    onComplete: (content) => {
+    onComplete: (content, metadata) => {
+      // Generate a unique content ID if not provided
+      const generatedContentId = (metadata?.contentId as string) || `${templateId}-${Date.now()}`;
+      setContentId(generatedContentId);
+      
+      // Call the callback with the generated content
       onContentGenerated(content);
+      
+      // Show feedback UI if enabled
+      if (showFeedback) {
+        setShowFeedbackUI(true);
+      }
     },
     onError: (error) => {
       console.error('Error generating content:', error);
       // Auto-clear error after 5 seconds
       setTimeout(() => reset(), 5000);
+      
+      // Hide feedback UI on error
+      setShowFeedbackUI(false);
     }
   });
   
@@ -212,6 +234,16 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
     return null;
   };
   
+  /**
+   * Handle feedback submission
+   */
+  const handleFeedbackSubmitted = (rating: number, comments: string) => {
+    // Hide feedback UI after submission
+    setShowFeedbackUI(false);
+    
+    console.log(`Feedback submitted for ${contentId}: ${rating}/5 - ${comments}`);
+  };
+  
   return (
     <div className="ai-assist-button-container">
       <button
@@ -231,6 +263,21 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
       {error && (
         <div className="mt-2 text-sm text-red-600" data-testid={`${testId}-error`}>
           {error}
+        </div>
+      )}
+      
+      {showFeedbackUI && contentId && (
+        <div className="mt-3" data-testid={`${testId}-feedback`}>
+          <AIFeedback
+            contentId={contentId}
+            templateId={templateId}
+            metadata={{
+              templateParams,
+              references: references.length > 0 ? references : undefined
+            }}
+            onFeedbackSubmitted={handleFeedbackSubmitted}
+            testId={`${testId}-feedback-component`}
+          />
         </div>
       )}
     </div>
