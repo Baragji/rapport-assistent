@@ -3,6 +3,8 @@ import Form from '@rjsf/core';
 import type { JSONSchema7 } from 'json-schema';
 import validator from '@rjsf/validator-ajv8';
 import { convertMarkdownToDocx, generateMarkdownReport } from '../utils/documentUtils';
+import type { Reference } from '../utils/documentUtils';
+import References from './References';
 
 // Define the JSON schema for the form
 const schema: JSONSchema7 = {
@@ -80,33 +82,11 @@ const uiSchema = {
       rows: 10,
     },
   },
+  // We'll use a custom component for references, so we hide it in the form
   references: {
-    'ui:options': {
-      addable: true,
-      removable: true,
-      orderable: true,
-    },
-    items: {
-      'ui:order': ['title', 'author', 'year', 'type', 'publisher', 'url'],
-      url: {
-        'ui:placeholder': 'https://example.com',
-      },
-      year: {
-        'ui:placeholder': 'YYYY',
-      },
-    },
+    'ui:widget': 'hidden',
   },
 };
-
-// Define the reference interface
-interface Reference {
-  title: string;
-  author: string;
-  year?: string;
-  url?: string;
-  publisher?: string;
-  type: 'Book' | 'Article' | 'Website' | 'Journal' | 'Conference' | 'Other';
-}
 
 // Define the form data interface
 interface ReportFormData {
@@ -174,6 +154,14 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
     }
   };
 
+  // Handle references changes separately from the form
+  const handleReferencesChange = (newReferences: Reference[]) => {
+    setFormData({
+      ...formData,
+      references: newReferences
+    });
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Create New Report</h2>
@@ -196,6 +184,14 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         disabled={isSubmitting}
         validator={validator}
       >
+        <div className="mt-6 mb-6 border-t border-gray-200 pt-6">
+          <References 
+            references={formData.references} 
+            onChange={handleReferencesChange}
+            disabled={isSubmitting}
+          />
+        </div>
+        
         <div className="mt-4 flex justify-end">
           <button
             type="submit"

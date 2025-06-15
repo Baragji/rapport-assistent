@@ -4,6 +4,31 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReportForm from '../ReportForm';
 
+// Mock the References component
+vi.mock('../References', () => ({
+  default: ({ references, onChange, disabled }: {
+    references: Record<string, unknown>[];
+    onChange: (refs: Record<string, unknown>[]) => void;
+    disabled?: boolean;
+  }) => (
+    <div data-testid="mock-references">
+      <div data-testid="references-data" style={{ display: 'none' }}>
+        {JSON.stringify(references)}
+      </div>
+      <div data-testid="references-disabled" style={{ display: 'none' }}>
+        {disabled ? 'true' : 'false'}
+      </div>
+      <button
+        data-testid="mock-add-reference"
+        onClick={() => onChange([...references, { title: 'New Ref', author: 'Test Author', type: 'Article' }])}
+        disabled={disabled}
+      >
+        Add Reference
+      </button>
+    </div>
+  ),
+}));
+
 // Mock the document utils
 vi.mock('../../utils/documentUtils', () => ({
   generateMarkdownReport: vi.fn((title: string, content: string, category: string, references = []) => {
@@ -305,6 +330,55 @@ describe('ReportForm Component', () => {
     expect(refItemProps.type.enum).toContain('Book');
     expect(refItemProps.type.enum).toContain('Article');
     expect(refItemProps.type.enum).toContain('Website');
+  });
+  
+  it('renders the References component with correct props', () => {
+    render(<ReportForm />);
+    
+    expect(screen.getByTestId('mock-references')).toBeInTheDocument();
+    
+    const referencesDataElement = screen.getByTestId('references-data');
+    const referencesData = JSON.parse(referencesDataElement.textContent || '[]');
+    expect(referencesData).toEqual([]);
+    
+    const referencesDisabledElement = screen.getByTestId('references-disabled');
+    expect(referencesDisabledElement.textContent).toBe('false');
+  });
+  
+  it('updates form data when References component changes', async () => {
+    const user = userEvent.setup();
+    render(<ReportForm />);
+    
+    // Click the mock add reference button
+    await user.click(screen.getByTestId('mock-add-reference'));
+    
+    // Check that the form data was updated
+    const formDataElement = screen.getByTestId('form-data');
+    const formData = JSON.parse(formDataElement.textContent || '{}');
+    
+    expect(formData.references).toHaveLength(1);
+    expect(formData.references[0].title).toBe('New Ref');
+    expect(formData.references[0].author).toBe('Test Author');
+    expect(formData.references[0].type).toBe('Article');
+  });
+  
+  it('disables References component when form is submitting', async () => {
+    const user = userEvent.setup();
+    render(<ReportForm />);
+    
+    // Mock a delayed response
+    const { convertMarkdownToDocx } = await import('../../utils/documentUtils');
+    vi.mocked(convertMarkdownToDocx).mockImplementation(() => 
+      new Promise(resolve => setTimeout(resolve, 100))
+    );
+    
+    // Submit the form
+    const mockSubmitButton = screen.getByTestId('mock-submit-button');
+    await user.click(mockSubmitButton);
+    
+    // Check that the References component is disabled
+    const referencesDisabledElement = screen.getByTestId('references-disabled');
+    expect(referencesDisabledElement.textContent).toBe('true');
   });
 
   it('logs errors to console when submission fails', async () => {
