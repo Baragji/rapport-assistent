@@ -85,6 +85,7 @@ export class AIClient {
     this.client = new OpenAI({
       apiKey: this.config.apiKey || 'dummy-key-for-development',
       timeout: this.config.timeout,
+      dangerouslyAllowBrowser: import.meta.env.MODE === 'test' || import.meta.env.VITE_ALLOW_BROWSER === 'true',
     });
   }
   
