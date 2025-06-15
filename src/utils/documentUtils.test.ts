@@ -130,7 +130,7 @@ describe('Document Utilities', () => {
       // Mock setTimeout to execute immediately
       vi.spyOn(global, 'setTimeout').mockImplementation((fn) => {
         if (typeof fn === 'function') fn();
-        return 0 as NodeJS.Timeout;
+        return 0 as unknown as NodeJS.Timeout;
       });
 
       // Mock md-to-docx
@@ -158,7 +158,7 @@ describe('Document Utilities', () => {
             }
           ]
         })
-      } as ReturnType<typeof unified>);
+      } as unknown as ReturnType<typeof unified>);
     });
 
     afterEach(() => {
