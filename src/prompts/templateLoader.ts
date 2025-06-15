@@ -4,13 +4,13 @@ import { TemplateCategory, type PromptTemplate, type TemplateCategoryType } from
  * Interface for JSON template files
  */
 export interface TemplateFile {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  version: string;
-  tags: string[];
-  template: string;
+  id?: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  version?: string;
+  tags?: string[];
+  template?: string;
   exampleInput?: Record<string, string>;
   exampleOutput?: string;
 }
@@ -28,6 +28,23 @@ export class TemplateLoader {
     try {
       const templateData = JSON.parse(templateJson) as TemplateFile;
       
+      // Validate required fields
+      if (!templateData.id) {
+        throw new Error('Template ID is required');
+      }
+      if (!templateData.name) {
+        throw new Error('Template name is required');
+      }
+      if (!templateData.description) {
+        throw new Error('Template description is required');
+      }
+      if (!templateData.version) {
+        throw new Error('Template version is required');
+      }
+      if (!templateData.template) {
+        throw new Error('Template content is required');
+      }
+      
       // Convert string category to enum
       const category = this.stringToCategoryEnum(templateData.category);
       
@@ -37,12 +54,21 @@ export class TemplateLoader {
         description: templateData.description,
         category,
         version: templateData.version,
-        tags: templateData.tags,
+        tags: templateData.tags || [],
         template: templateData.template,
         exampleInput: templateData.exampleInput,
         exampleOutput: templateData.exampleOutput
       };
     } catch (error) {
+      // Re-throw validation errors directly
+      if (error instanceof Error && 
+          (error.message.includes('required') || 
+           error.message.includes('Template'))) {
+        console.error('Template validation error:', error);
+        throw error;
+      }
+      
+      // For other errors (like JSON parsing), use the generic message
       console.error('Error loading template from JSON:', error);
       throw new Error('Failed to load template from JSON');
     }
@@ -53,7 +79,11 @@ export class TemplateLoader {
    * @param category The category string
    * @returns The corresponding TemplateCategory value
    */
-  private static stringToCategoryEnum(category: string): TemplateCategoryType {
+  private static stringToCategoryEnum(category?: string): TemplateCategoryType {
+    if (!category) {
+      return TemplateCategory.GENERAL;
+    }
+    
     switch (category.toLowerCase()) {
       case 'introduction':
         return TemplateCategory.INTRODUCTION;
@@ -77,7 +107,19 @@ export class TemplateLoader {
    * @returns Array of PromptTemplate objects
    */
   static loadMultipleFromJson(templateJsonArray: string[]): PromptTemplate[] {
-    return templateJsonArray.map(json => this.loadFromJson(json));
+    const templates: PromptTemplate[] = [];
+    
+    for (const json of templateJsonArray) {
+      try {
+        const template = this.loadFromJson(json);
+        templates.push(template);
+      } catch (error) {
+        console.error('Error loading template from JSON array:', error);
+        throw error;
+      }
+    }
+    
+    return templates;
   }
 }
 
