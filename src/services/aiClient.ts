@@ -10,7 +10,8 @@ export const AIErrorType = {
   TIMEOUT: 'timeout_error',
   INVALID_REQUEST: 'invalid_request_error',
   NETWORK: 'network_error',
-  UNKNOWN: 'unknown_error'
+  UNKNOWN: 'unknown_error',
+  STREAM_ERROR: 'stream_error'
 } as const;
 
 export type AIErrorTypeValue = typeof AIErrorType[keyof typeof AIErrorType];
@@ -46,7 +47,14 @@ export interface AIClientConfig {
   maxRetries?: number;
   retryDelay?: number;
   timeout?: number;
+  temperature?: number;
+  maxTokens?: number;
 }
+
+/**
+ * Callback function for streaming responses
+ */
+export type StreamCallback = (chunk: string, progress: number) => void;
 
 /**
  * OpenAI client for generating AI-assisted content
@@ -64,7 +72,9 @@ export class AIClient {
     model: 'gpt-4',
     maxRetries: 3,
     retryDelay: 1000,
-    timeout: 30000
+    timeout: 30000,
+    temperature: 0.7,
+    maxTokens: 1000
   };
   
   /**
@@ -118,8 +128,8 @@ export class AIClient {
         const response = await this.client.chat.completions.create({
           model: this.config.model,
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
-          max_tokens: 1000,
+          temperature: this.config.temperature,
+          max_tokens: this.config.maxTokens,
         });
         
         // Check if we have a valid response with choices
@@ -157,6 +167,97 @@ export class AIClient {
   }
   
   /**
+   * Generate content using OpenAI's streaming API
+   * @param prompt The prompt to send to the API
+   * @param onStream Callback function for streaming updates
+   * @returns The complete generated text
+   * @throws AIError if streaming fails
+   */
+  async generateContentStream(prompt: string, onStream?: StreamCallback): Promise<string> {
+    if (!prompt || prompt.trim() === '') {
+      throw new AIError(
+        'Prompt cannot be empty',
+        AIErrorType.INVALID_REQUEST,
+        false
+      );
+    }
+    
+    let lastError: AIError | null = null;
+    let fullContent = '';
+    
+    // Try the request up to maxRetries times
+    for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
+      try {
+        // Add exponential backoff if this is a retry
+        if (attempt > 0) {
+          const delay = this.config.retryDelay * Math.pow(2, attempt - 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        // Reset content for retry attempts
+        fullContent = '';
+        
+        // Create a streaming completion
+        const stream = await this.client.chat.completions.create({
+          model: this.config.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: this.config.temperature,
+          max_tokens: this.config.maxTokens,
+          stream: true,
+        });
+        
+        // Process the stream
+        let tokenCount = 0;
+        const estimatedTotalTokens = this.config.maxTokens / 2; // Initial estimate
+        
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content || '';
+          
+          if (content) {
+            fullContent += content;
+            tokenCount += 1;
+            
+            // Calculate progress (0-100)
+            const progress = Math.min(
+              Math.round((tokenCount / estimatedTotalTokens) * 100), 
+              99
+            ); // Cap at 99% until complete
+            
+            // Call the stream callback if provided
+            if (onStream) {
+              onStream(content, progress);
+            }
+          }
+        }
+        
+        // Final progress update
+        if (onStream) {
+          onStream('', 100);
+        }
+        
+        return fullContent;
+      } catch (error) {
+        lastError = this.handleError(error);
+        
+        // If the error is not retryable, break immediately
+        if (!lastError.retryable) {
+          break;
+        }
+        
+        // Log retry attempt
+        console.warn(`Retry attempt ${attempt + 1}/${this.config.maxRetries} after error: ${lastError.message}`);
+      }
+    }
+    
+    // If we've exhausted all retries or had a non-retryable error
+    throw lastError || new AIError(
+      'Failed to generate streaming AI content after multiple attempts',
+      AIErrorType.STREAM_ERROR,
+      false
+    );
+  }
+  
+  /**
    * Classify and handle errors from the OpenAI API
    * @param error The error from the API call
    * @returns A standardized AIError
@@ -165,7 +266,7 @@ export class AIClient {
     // OpenAI API errors
     if (error instanceof Error) {
       // Cast to unknown first, then to a type with status property
-      const errorObj = error as unknown as { status?: number; message: string };
+      const errorObj = error as unknown as { status?: number; message: string; type?: string };
       
       // Handle OpenAI API errors
       const status = errorObj.status;
@@ -220,6 +321,16 @@ export class AIClient {
         return new AIError(
           'Network error: Please check your internet connection',
           AIErrorType.NETWORK,
+          true,
+          error
+        );
+      }
+      
+      // Streaming errors
+      if (error.message.includes('stream') || errorObj.type === 'stream_error') {
+        return new AIError(
+          'Streaming error: Failed to process the response stream',
+          AIErrorType.STREAM_ERROR,
           true,
           error
         );

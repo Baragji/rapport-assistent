@@ -351,16 +351,30 @@ export class PromptService {
    * Generate content using a template and the AI client
    * @param templateId The template ID
    * @param params The parameters to fill the template with
+   * @param streaming Whether to use streaming API
+   * @param onStream Callback for streaming updates
    * @returns The generated content or null if failed
    */
-  async generateContent(templateId: string, params: TemplateParams): Promise<string | null> {
+  async generateContent(
+    templateId: string, 
+    params: TemplateParams,
+    streaming = false,
+    onStream?: (chunk: string, progress: number) => void
+  ): Promise<string | null> {
     const filledTemplate = this.fillTemplate(templateId, params);
     if (!filledTemplate) {
       return null;
     }
     
     try {
-      const content = await this.aiClient.generateContent(filledTemplate);
+      let content: string;
+      
+      if (streaming && onStream) {
+        content = await this.aiClient.generateContentStream(filledTemplate, onStream);
+      } else {
+        content = await this.aiClient.generateContent(filledTemplate);
+      }
+      
       return content;
     } catch (error) {
       console.error('Error generating content from template:', error);

@@ -4,6 +4,34 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReportForm from '../ReportForm';
 
+// Mock the AIAssistButton component
+vi.mock('../AIAssistButton', () => ({
+  default: ({ 
+    templateId, 
+    onContentGenerated, 
+    label, 
+    disabled, 
+    testId = 'ai-assist-button',
+  }: {
+    templateId: string;
+    templateParams?: Record<string, unknown>;
+    onContentGenerated: (content: string) => void;
+    label: string;
+    disabled?: boolean;
+    testId?: string;
+    streaming?: boolean;
+    references?: Array<Record<string, unknown>>;
+  }) => (
+    <button
+      data-testid={testId}
+      onClick={() => onContentGenerated(`Generated content for ${templateId}`)}
+      disabled={disabled}
+    >
+      {label}
+    </button>
+  ),
+}));
+
 // Mock the References component
 vi.mock('../References', () => ({
   default: ({ references, onChange, disabled }: {
@@ -419,5 +447,39 @@ describe('ReportForm Component', () => {
     // Button should be back to normal state
     expect(screen.getByRole('button', { name: 'Generate Report' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Generate Report' })).not.toBeDisabled();
+  });
+
+  // AI integration tests
+  it('renders AI assist buttons with correct props', () => {
+    render(<ReportForm />);
+    
+    // Check that the AI assist buttons are rendered with the correct props
+    expect(screen.getByTestId('generate-title-button')).toBeInTheDocument();
+    expect(screen.getByTestId('improve-content-button')).toBeInTheDocument();
+    expect(screen.getByTestId('generate-content-button')).toBeInTheDocument();
+    
+    // Check that the improve content button is disabled when there's no content
+    expect(screen.getByTestId('improve-content-button')).toBeDisabled();
+  });
+  
+  it('disables AI buttons during form submission', async () => {
+    const user = userEvent.setup();
+    const { convertMarkdownToDocx } = await import('../../utils/documentUtils');
+    
+    // Mock a delayed response
+    vi.mocked(convertMarkdownToDocx).mockImplementation(() => 
+      new Promise(resolve => setTimeout(resolve, 100))
+    );
+    
+    render(<ReportForm />);
+    
+    // Submit the form
+    const mockSubmitButton = screen.getByTestId('mock-submit-button');
+    await user.click(mockSubmitButton);
+    
+    // Check that the AI buttons are disabled
+    expect(screen.getByTestId('generate-title-button')).toBeDisabled();
+    expect(screen.getByTestId('improve-content-button')).toBeDisabled();
+    expect(screen.getByTestId('generate-content-button')).toBeDisabled();
   });
 });

@@ -222,6 +222,8 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
             disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
             tooltip="Generate a title using AI"
             testId="generate-title-button"
+            streaming={true}
+            references={formData.references}
           />
         </div>
         <div id="title-input" className="sr-only" aria-hidden="true"></div>
@@ -254,6 +256,8 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
                 disabled={isSubmitting || isGeneratingTitle || isGeneratingContent || !formData.content}
                 tooltip="Improve the clarity of your content"
                 testId="improve-content-button"
+                streaming={true}
+                references={formData.references}
               />
               <AIAssistButton
                 templateId="analysis-data"
@@ -269,6 +273,8 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
                 disabled={isSubmitting || isGeneratingTitle || isGeneratingContent || !formData.title}
                 tooltip="Generate content based on the title"
                 testId="generate-content-button"
+                streaming={true}
+                references={formData.references}
               />
             </div>
           </div>

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { promptService } from '../services/promptService';
-import { AIError, AIErrorType } from '../services/aiClient';
+import React, { useState, useEffect } from 'react';
+import { useAI } from '../hooks/useAI';
 
 export interface AIAssistButtonProps {
   /**
@@ -57,6 +56,23 @@ export interface AIAssistButtonProps {
    * Test ID for testing
    */
   testId?: string;
+  
+  /**
+   * Whether to use streaming responses
+   */
+  streaming?: boolean;
+  
+  /**
+   * References to include in the context
+   */
+  references?: Array<{
+    title: string;
+    author: string;
+    year?: string;
+    url?: string;
+    publisher?: string;
+    type?: string;
+  }>;
 }
 
 /**
@@ -74,9 +90,37 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
   variant = 'primary',
   tooltip,
   testId = 'ai-assist-button',
+  streaming = true,
+  references = [],
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  
+  // Use the AI hook for content generation
+  const {
+    isLoading,
+    error,
+    progress: aiProgress,
+    generateContent,
+    reset
+  } = useAI({
+    streaming,
+    onStream: (_chunk, progress) => {
+      setProgress(progress);
+    },
+    onComplete: (content) => {
+      onContentGenerated(content);
+    },
+    onError: (error) => {
+      console.error('Error generating content:', error);
+      // Auto-clear error after 5 seconds
+      setTimeout(() => reset(), 5000);
+    }
+  });
+  
+  // Update progress when AI progress changes
+  useEffect(() => {
+    setProgress(aiProgress);
+  }, [aiProgress]);
   
   // Size classes
   const sizeClasses = {
@@ -113,29 +157,29 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
   const handleClick = async () => {
     if (isLoading || disabled) return;
     
-    setIsLoading(true);
-    setError(null);
+    // Reset state
+    reset();
+    
+    // Add references to template params if provided
+    const enhancedParams = {
+      ...templateParams
+    };
+    
+    // Add references context if available
+    if (references && references.length > 0) {
+      const referencesText = references
+        .map(ref => `- ${ref.title} by ${ref.author}${ref.year ? ` (${ref.year})` : ''}`)
+        .join('\n');
+      
+      enhancedParams.references = referencesText;
+    }
     
     try {
-      const content = await promptService.generateContent(templateId, templateParams);
-      
-      if (!content) {
-        throw new AIError(
-          'Failed to generate content',
-          AIErrorType.UNKNOWN,
-          false
-        );
-      }
-      
-      onContentGenerated(content);
+      // Generate content using the template
+      await generateContent(templateId, enhancedParams);
     } catch (err) {
-      console.error('Error generating content:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      
-      // Auto-clear error after 5 seconds
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setIsLoading(false);
+      // Error handling is done in the useAI hook
+      console.error('Error in handleClick:', err);
     }
   };
   
@@ -152,6 +196,22 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
     return <span className="mr-2">✨</span>;
   };
   
+  // Render progress bar if streaming and in progress
+  const renderProgressBar = () => {
+    if (isLoading && streaming && progress > 0) {
+      return (
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+          <div 
+            className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-in-out" 
+            style={{ width: `${progress}%` }}
+            data-testid={`${testId}-progress`}
+          ></div>
+        </div>
+      );
+    }
+    return null;
+  };
+  
   return (
     <div className="ai-assist-button-container">
       <button
@@ -165,6 +225,8 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
         {renderButtonIcon()}
         {label}
       </button>
+      
+      {renderProgressBar()}
       
       {error && (
         <div className="mt-2 text-sm text-red-600" data-testid={`${testId}-error`}>
