@@ -5,6 +5,7 @@ import { promptService } from '../services/promptService';
 import type { TemplateParams } from '../services/promptService';
 import { performanceMonitor } from '../utils/performanceMonitor';
 import { getFeatureFlag } from '../utils/featureFlags';
+import { startAIOperationTiming } from '../services/analyticsService';
 
 /**
  * Interface for the useAI hook return value
@@ -133,6 +134,9 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     
     const startTime = performance.now();
     
+    // Start timing the AI operation for analytics
+    const timing = startAIOperationTiming(`template-${templateId}`);
+    
     // Only use performance monitoring if feature flag is enabled
     if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
       performanceMonitor.startMetric(`ai-template-${templateId}`, { templateId, params });
@@ -186,6 +190,18 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
         );
       }
       
+      // Stop timing and track successful AI usage
+      timing.stopTiming({
+        featureId: 'template-generation',
+        templateId,
+        success: true,
+        tokenCount: result.length / 4, // Rough estimate of token count
+        metadata: {
+          promptTemplate: templateId,
+          responseLength: result.length
+        }
+      });
+      
       // Call onComplete callback with metadata
       const metadata = {
         contentId: `${templateId}-${Date.now()}`,
@@ -220,6 +236,19 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
         );
       }
       
+      // Stop timing and track failed AI usage
+      timing.stopTiming({
+        featureId: 'template-generation',
+        templateId,
+        success: false,
+        errorType: aiError.type,
+        errorMessage: aiError.message,
+        metadata: {
+          promptTemplate: templateId,
+          isRetryable: aiError.retryable
+        }
+      });
+      
       setError(aiError.message);
       options.onError?.(aiError);
       
@@ -243,6 +272,9 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     setProgress(0);
     
     const startTime = performance.now();
+    
+    // Start timing the AI operation for analytics
+    const timing = startAIOperationTiming('raw-prompt');
     
     // Only use performance monitoring if feature flag is enabled
     if (getFeatureFlag('AI_PERFORMANCE_MONITORING')) {
@@ -285,6 +317,17 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
         );
       }
       
+      // Stop timing and track successful AI usage
+      timing.stopTiming({
+        featureId: 'raw-prompt-generation',
+        success: true,
+        tokenCount: result.length / 4, // Rough estimate of token count
+        metadata: {
+          promptLength: prompt.length,
+          responseLength: result.length
+        }
+      });
+      
       // Call onComplete callback with metadata
       const metadata = {
         contentId: `raw-prompt-${Date.now()}`,
@@ -317,6 +360,18 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
           aiError.message
         );
       }
+      
+      // Stop timing and track failed AI usage
+      timing.stopTiming({
+        featureId: 'raw-prompt-generation',
+        success: false,
+        errorType: aiError.type,
+        errorMessage: aiError.message,
+        metadata: {
+          promptLength: prompt.length,
+          isRetryable: aiError.retryable
+        }
+      });
       
       setError(aiError.message);
       options.onError?.(aiError);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { submitFeedback } from '../services/feedbackService';
+import { trackEvent } from '../services/analyticsService';
 
 export interface AIFeedbackProps {
   /**
@@ -86,6 +87,13 @@ const AIFeedback: React.FC<AIFeedbackProps> = ({
         comments,
         metadata,
         timestamp: new Date().toISOString(),
+      });
+      
+      // Track feedback submission event
+      trackEvent('feedback_submit', 'ai_content_feedback', {
+        templateId,
+        rating,
+        hasComments: comments.length > 0
       });
       
       setSubmitted(true);

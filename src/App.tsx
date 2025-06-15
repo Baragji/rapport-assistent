@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReportForm from './components/ReportForm';
 import PieChart from './components/PieChart';
+import { initAnalyticsSession } from './services/analyticsService';
 
 // Define the form data interface
 interface FormData {
@@ -11,6 +12,11 @@ interface FormData {
 
 function App() {
   const [reports, setReports] = useState<FormData[]>([]);
+  
+  // Initialize analytics session when the app starts
+  useEffect(() => {
+    initAnalyticsSession();
+  }, []);
 
   // Sample data for the pie chart
   const chartData = {

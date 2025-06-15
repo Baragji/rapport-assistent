@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAI } from '../hooks/useAI';
 import AIFeedback from './AIFeedback';
+import { trackEvent } from '../services/analyticsService';
 
 export interface AIAssistButtonProps {
   /**
@@ -178,6 +179,13 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
   
   const handleClick = async () => {
     if (isLoading || disabled) return;
+    
+    // Track button click event
+    trackEvent('button_click', 'ai_assist_button', {
+      templateId,
+      hasReferences: references && references.length > 0,
+      referenceCount: references ? references.length : 0
+    });
     
     // Reset state
     reset();
