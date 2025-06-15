@@ -29,10 +29,17 @@ describe('AIClient', () => {
     mockCreate = vi.fn();
     mockModelsList = vi.fn();
     
-    // @ts-expect-error - Mocking the OpenAI client
-    OpenAI.prototype.chat.completions.create = mockCreate;
-    // @ts-expect-error - Mocking the OpenAI client
-    OpenAI.prototype.models.list = mockModelsList;
+    // We need to mock the OpenAI client methods
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (OpenAI.prototype as any).chat = { 
+      completions: { 
+        create: mockCreate 
+      } 
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (OpenAI.prototype as any).models = { 
+      list: mockModelsList 
+    };
     
     // Create a new client instance with a test API key
     aiClient = new AIClient({

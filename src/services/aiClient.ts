@@ -167,7 +167,9 @@ export class AIClient {
       const errorObj = error as unknown as { status?: number; message: string };
       
       // Handle OpenAI API errors
-      if (errorObj.status === 401 || errorObj.status === 403) {
+      const status = errorObj.status;
+      
+      if (status === 401 || status === 403) {
         return new AIError(
           'Authentication error: Please check your API key',
           AIErrorType.AUTHENTICATION,
@@ -176,7 +178,7 @@ export class AIClient {
         );
       }
       
-      if (errorObj.status === 429) {
+      if (status === 429) {
         return new AIError(
           'Rate limit exceeded: Too many requests',
           AIErrorType.RATE_LIMIT,
@@ -185,7 +187,7 @@ export class AIClient {
         );
       }
       
-      if (errorObj.status >= 500) {
+      if (status !== undefined && status >= 500) {
         return new AIError(
           'OpenAI server error: Please try again later',
           AIErrorType.SERVER,
@@ -194,7 +196,7 @@ export class AIClient {
         );
       }
       
-      if (errorObj.status === 408 || error.message.includes('timeout')) {
+      if (status === 408 || error.message.includes('timeout')) {
         return new AIError(
           'Request timed out: Please try again later',
           AIErrorType.TIMEOUT,
@@ -203,7 +205,7 @@ export class AIClient {
         );
       }
       
-      if (errorObj.status === 400) {
+      if (status === 400) {
         return new AIError(
           'Invalid request: ' + error.message,
           AIErrorType.INVALID_REQUEST,
