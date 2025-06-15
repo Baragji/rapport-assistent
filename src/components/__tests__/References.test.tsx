@@ -2,9 +2,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import References from '../References';
 import type { Reference } from '../../utils/documentUtils';
+import type { ValidationResult } from '../../utils/validationUtils';
 
 describe('References Component', () => {
   const mockOnChange = vi.fn();
+  const mockOnBlur = vi.fn();
   
   const sampleReferences: Reference[] = [
     {
@@ -22,8 +24,29 @@ describe('References Component', () => {
     }
   ];
 
+  const mockErrors: Record<number, Record<string, ValidationResult>> = {
+    0: {
+      title: { isValid: true, message: '' },
+      author: { isValid: false, message: 'Author is required' },
+      year: { isValid: true, message: '' },
+      url: { isValid: false, message: 'Invalid URL format' },
+      type: { isValid: true, message: '' },
+    },
+  };
+
+  const mockTouched: Record<number, Record<string, boolean>> = {
+    0: {
+      title: true,
+      author: true,
+      year: false,
+      url: true,
+      type: false,
+    },
+  };
+
   beforeEach(() => {
     mockOnChange.mockClear();
+    mockOnBlur.mockClear();
   });
 
   it('renders empty state when no references are provided', () => {
@@ -140,7 +163,28 @@ describe('References Component', () => {
       }
     ];
     
-    render(<References references={referencesWithEmptyFields} onChange={mockOnChange} />);
+    const mockErrors = {
+      0: {
+        title: { isValid: false, message: 'Title is required' },
+        author: { isValid: false, message: 'Author is required' },
+      }
+    };
+    
+    const mockTouched = {
+      0: {
+        title: true,
+        author: true,
+      }
+    };
+    
+    render(
+      <References 
+        references={referencesWithEmptyFields} 
+        onChange={mockOnChange}
+        errors={mockErrors}
+        touched={mockTouched}
+      />
+    );
     
     expect(screen.getByText('Title is required')).toBeInTheDocument();
     expect(screen.getByText('Author is required')).toBeInTheDocument();
@@ -155,5 +199,108 @@ describe('References Component', () => {
     
     const options = Array.from(typeSelect.querySelectorAll('option')).map(option => option.value);
     expect(options).toEqual(['Article', 'Book', 'Website', 'Journal', 'Conference', 'Other']);
+  });
+
+  // New tests for validation features
+  it('displays validation errors from props', () => {
+    render(
+      <References
+        references={sampleReferences}
+        onChange={mockOnChange}
+        errors={mockErrors}
+        touched={mockTouched}
+        onBlur={mockOnBlur}
+      />
+    );
+
+    expect(screen.getByText('Author is required')).toBeInTheDocument();
+    expect(screen.getByText('Invalid URL format')).toBeInTheDocument();
+  });
+
+  it('calls onBlur handler when fields lose focus', () => {
+    render(
+      <References
+        references={sampleReferences}
+        onChange={mockOnChange}
+        errors={mockErrors}
+        touched={mockTouched}
+        onBlur={mockOnBlur}
+      />
+    );
+
+    fireEvent.blur(screen.getByTestId('title-input-0'));
+    expect(mockOnBlur).toHaveBeenCalledWith(0, 'title');
+
+    fireEvent.blur(screen.getByTestId('author-input-0'));
+    expect(mockOnBlur).toHaveBeenCalledWith(0, 'author');
+  });
+
+  it('applies correct validation classes to fields', () => {
+    render(
+      <References
+        references={sampleReferences}
+        onChange={mockOnChange}
+        errors={mockErrors}
+        touched={mockTouched}
+        onBlur={mockOnBlur}
+      />
+    );
+
+    // Title is valid and touched
+    const titleInput = screen.getByTestId('title-input-0');
+    expect(titleInput.className).toContain('border-green-500');
+    
+    // Author is invalid and touched
+    const authorInput = screen.getByTestId('author-input-0');
+    expect(authorInput.className).toContain('border-red-500');
+    
+    // URL is invalid and touched
+    const urlInput = screen.getByTestId('url-input-0');
+    expect(urlInput.className).toContain('border-red-500');
+    
+    // Year is not touched, so should have default styling
+    const yearInput = screen.getByTestId('year-input-0');
+    expect(yearInput.className).toContain('border-gray-300');
+  });
+
+  it('shows checkmark icon for valid fields', () => {
+    render(
+      <References
+        references={sampleReferences}
+        onChange={mockOnChange}
+        errors={mockErrors}
+        touched={mockTouched}
+        onBlur={mockOnBlur}
+      />
+    );
+
+    // Title is valid and touched, should have checkmark
+    const titleField = screen.getByTestId('title-input-0').parentElement;
+    expect(titleField?.innerHTML).toContain('svg');
+    
+    // Author is invalid and touched, should not have checkmark
+    const authorField = screen.getByTestId('author-input-0').parentElement;
+    expect(authorField?.querySelectorAll('svg').length).toBe(0);
+  });
+
+  it('sets aria-invalid attribute correctly', () => {
+    render(
+      <References
+        references={sampleReferences}
+        onChange={mockOnChange}
+        errors={mockErrors}
+        touched={mockTouched}
+        onBlur={mockOnBlur}
+      />
+    );
+
+    // Title is valid
+    expect(screen.getByTestId('title-input-0')).not.toHaveAttribute('aria-invalid', 'true');
+    
+    // Author is invalid
+    expect(screen.getByTestId('author-input-0')).toHaveAttribute('aria-invalid', 'true');
+    
+    // URL is invalid
+    expect(screen.getByTestId('url-input-0')).toHaveAttribute('aria-invalid', 'true');
   });
 });

@@ -34,10 +34,13 @@ vi.mock('../AIAssistButton', () => ({
 
 // Mock the References component
 vi.mock('../References', () => ({
-  default: ({ references, onChange, disabled }: {
+  default: ({ references, onChange, disabled, errors, touched, onBlur }: {
     references: Record<string, unknown>[];
     onChange: (refs: Record<string, unknown>[]) => void;
     disabled?: boolean;
+    errors?: Record<number, Record<string, { isValid: boolean; message: string }>>;
+    touched?: Record<number, Record<string, boolean>>;
+    onBlur?: (index: number, field: string) => void;
   }) => (
     <div data-testid="mock-references">
       <div data-testid="references-data" style={{ display: 'none' }}>
@@ -46,12 +49,24 @@ vi.mock('../References', () => ({
       <div data-testid="references-disabled" style={{ display: 'none' }}>
         {disabled ? 'true' : 'false'}
       </div>
+      <div data-testid="references-errors" style={{ display: 'none' }}>
+        {JSON.stringify(errors)}
+      </div>
+      <div data-testid="references-touched" style={{ display: 'none' }}>
+        {JSON.stringify(touched)}
+      </div>
       <button
         data-testid="mock-add-reference"
         onClick={() => onChange([...references, { title: 'New Ref', author: 'Test Author', type: 'Article' }])}
         disabled={disabled}
       >
         Add Reference
+      </button>
+      <button
+        data-testid="mock-blur-reference"
+        onClick={() => onBlur && onBlur(0, 'title')}
+      >
+        Trigger Blur
       </button>
     </div>
   ),
@@ -109,11 +124,65 @@ vi.mock('@rjsf/validator-ajv8', () => ({
   default: {},
 }));
 
+// Mock the useFormValidation hook
+vi.mock('../../hooks/useFormValidation', () => ({
+  default: vi.fn().mockReturnValue({
+    errors: {
+      title: { isValid: true, message: '' },
+      content: { isValid: true, message: '' },
+      references: {},
+    },
+    touched: {
+      title: false,
+      content: false,
+      references: {},
+    },
+    isFormValid: true,
+    isSubmitting: false,
+    validateForm: vi.fn().mockReturnValue(true),
+    handleBlur: vi.fn(),
+    handleChange: vi.fn(),
+    handleSubmit: vi.fn((callback) => (e: React.FormEvent) => {
+      e.preventDefault();
+      callback(e);
+    }),
+    setIsSubmitting: vi.fn(),
+  }),
+}));
+
+// Import the mocked module
+import useFormValidationModule from '../../hooks/useFormValidation';
+
 describe('ReportForm Component', () => {
   const mockOnSubmit = vi.fn();
+  const useFormValidation = vi.mocked(useFormValidationModule);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Reset the mock implementation for useFormValidation
+    useFormValidation.mockReturnValue({
+      errors: {
+        title: { isValid: true, message: '' },
+        content: { isValid: true, message: '' },
+        references: {},
+      },
+      touched: {
+        title: false,
+        content: false,
+        references: {},
+      },
+      isFormValid: true,
+      isSubmitting: false,
+      validateForm: vi.fn().mockReturnValue(true),
+      handleBlur: vi.fn(),
+      handleChange: vi.fn(),
+      handleSubmit: vi.fn((callback) => (e: React.FormEvent) => {
+        e.preventDefault();
+        callback(e);
+      }),
+      setIsSubmitting: vi.fn(),
+    });
   });
 
   it('renders with default elements', () => {
@@ -366,8 +435,259 @@ describe('ReportForm Component', () => {
     expect(screen.getByTestId('mock-references')).toBeInTheDocument();
     
     const referencesDataElement = screen.getByTestId('references-data');
-    const referencesData = JSON.parse(referencesDataElement.textContent ?? '[]');
-    expect(referencesData).toEqual([]);
+    expect(JSON.parse(referencesDataElement.textContent ?? '[]')).toEqual([]);
+  });
+  
+  // New tests for validation features
+  it('initializes useFormValidation with correct parameters', () => {
+    render(<ReportForm />);
+    
+    expect(useFormValidation).toHaveBeenCalledWith(
+      {
+        title: '',
+        content: '',
+        category: 'Technical',
+        references: [],
+      },
+      {
+        validateOnChange: true,
+        validateOnBlur: true,
+        validateOnMount: false,
+      }
+    );
+  });
+  
+  it('passes validation errors to References component', () => {
+    // Mock validation errors
+    useFormValidation.mockReturnValue({
+      errors: {
+        title: { isValid: false, message: 'Title is required' },
+        content: { isValid: true, message: '' },
+        references: {
+          0: {
+            title: { isValid: false, message: 'Reference title is required' },
+            author: { isValid: true, message: '' },
+          },
+        },
+      },
+      touched: {
+        title: true,
+        content: false,
+        references: {
+          0: {
+            title: true,
+            author: true,
+          },
+        },
+      },
+      isFormValid: false,
+      isSubmitting: false,
+      validateForm: vi.fn().mockReturnValue(false),
+      handleBlur: vi.fn(),
+      handleChange: vi.fn(),
+      handleSubmit: vi.fn(),
+      setIsSubmitting: vi.fn(),
+    });
+    
+    render(<ReportForm />);
+    
+    // Check that errors are passed to References component
+    const referencesErrorsElement = screen.getByTestId('references-errors');
+    const referencesErrors = JSON.parse(referencesErrorsElement.textContent ?? '{}');
+    
+    expect(referencesErrors[0].title.isValid).toBe(false);
+    expect(referencesErrors[0].title.message).toBe('Reference title is required');
+    
+    // Check that touched state is passed to References component
+    const referencesTouchedElement = screen.getByTestId('references-touched');
+    const referencesTouched = JSON.parse(referencesTouchedElement.textContent ?? '{}');
+    
+    expect(referencesTouched[0].title).toBe(true);
+    expect(referencesTouched[0].author).toBe(true);
+  });
+  
+  it('displays validation errors for title and content', () => {
+    // Mock validation errors
+    useFormValidation.mockReturnValue({
+      errors: {
+        title: { isValid: false, message: 'Title is required' },
+        content: { isValid: false, message: 'Content must be at least 10 characters' },
+        references: {},
+      },
+      touched: {
+        title: true,
+        content: true,
+        references: {},
+      },
+      isFormValid: false,
+      isSubmitting: false,
+      validateForm: vi.fn().mockReturnValue(false),
+      handleBlur: vi.fn(),
+      handleChange: vi.fn(),
+      handleSubmit: vi.fn(),
+      setIsSubmitting: vi.fn(),
+    });
+    
+    render(<ReportForm />);
+    
+    // Check that error messages are displayed
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
+    expect(screen.getByText('Content must be at least 10 characters')).toBeInTheDocument();
+  });
+  
+  it('disables submit button when form is invalid', () => {
+    // Mock invalid form
+    useFormValidation.mockReturnValue({
+      errors: {
+        title: { isValid: false, message: 'Title is required' },
+        content: { isValid: true, message: '' },
+        references: {},
+      },
+      touched: {
+        title: true,
+        content: false,
+        references: {},
+      },
+      isFormValid: false,
+      isSubmitting: false,
+      validateForm: vi.fn().mockReturnValue(false),
+      handleBlur: vi.fn(),
+      handleChange: vi.fn(),
+      handleSubmit: vi.fn(),
+      setIsSubmitting: vi.fn(),
+    });
+    
+    render(<ReportForm />);
+    
+    // Submit button should be disabled
+    const submitButton = screen.getByRole('button', { name: 'Generate Report' });
+    expect(submitButton).toBeDisabled();
+    expect(submitButton).toHaveClass('bg-gray-400');
+  });
+  
+  it('shows form completion progress indicator', () => {
+    // Mock partially valid form
+    useFormValidation.mockReturnValue({
+      errors: {
+        title: { isValid: true, message: '' },
+        content: { isValid: false, message: 'Content is required' },
+        references: {},
+      },
+      touched: {
+        title: true,
+        content: true,
+        references: {},
+      },
+      isFormValid: false,
+      isSubmitting: false,
+      validateForm: vi.fn().mockReturnValue(false),
+      handleBlur: vi.fn(),
+      handleChange: vi.fn(),
+      handleSubmit: vi.fn(),
+      setIsSubmitting: vi.fn(),
+    });
+    
+    render(<ReportForm />);
+    
+    // Progress indicator should show "Required fields missing"
+    expect(screen.getByText('Required fields missing')).toBeInTheDocument();
+    
+    // Progress bar should be partially filled
+    const progressBar = screen.getByText('Required fields missing').parentElement?.nextElementSibling?.firstElementChild;
+    expect(progressBar).toHaveStyle('width: 50%');
+  });
+  
+  it('calls validation functions when fields change', async () => {
+    const user = userEvent.setup();
+    const mockHandleChange = vi.fn();
+    const mockHandleBlur = vi.fn();
+    
+    // Mock validation functions
+    useFormValidation.mockReturnValue({
+      errors: {
+        title: { isValid: true, message: '' },
+        content: { isValid: true, message: '' },
+        references: {},
+      },
+      touched: {
+        title: false,
+        content: false,
+        references: {},
+      },
+      isFormValid: true,
+      isSubmitting: false,
+      validateForm: vi.fn().mockReturnValue(true),
+      handleBlur: mockHandleBlur,
+      handleChange: mockHandleChange,
+      handleSubmit: vi.fn(),
+      setIsSubmitting: vi.fn(),
+    });
+    
+    render(<ReportForm />);
+    
+    // Simulate changing title field
+    const titleInput = screen.getByTestId('title-input');
+    await user.type(titleInput, 'New Title');
+    
+    // handleChange should be called with field name and value
+    expect(mockHandleChange).toHaveBeenCalledWith('title', 'New Title');
+    
+    // Simulate blur event
+    await user.tab();
+    
+    // handleBlur should be called with field name
+    expect(mockHandleBlur).toHaveBeenCalledWith('title');
+  });
+  
+  it('validates form before submission', async () => {
+    const user = userEvent.setup();
+    const mockValidateForm = vi.fn().mockReturnValue(false);
+    
+    // Mock invalid form
+    useFormValidation.mockReturnValue({
+      errors: {
+        title: { isValid: false, message: 'Title is required' },
+        content: { isValid: true, message: '' },
+        references: {},
+      },
+      touched: {
+        title: true,
+        content: false,
+        references: {},
+      },
+      isFormValid: false,
+      isSubmitting: false,
+      validateForm: mockValidateForm,
+      handleBlur: vi.fn(),
+      handleChange: vi.fn(),
+      handleSubmit: vi.fn((callback) => (e: React.FormEvent) => {
+        e.preventDefault();
+        if (mockValidateForm()) {
+          callback(e);
+        }
+      }),
+      setIsSubmitting: vi.fn(),
+    });
+    
+    render(<ReportForm />);
+    
+    const mockSubmitButton = screen.getByTestId('mock-submit-button');
+    await user.click(mockSubmitButton);
+    
+    // validateForm should be called
+    expect(mockValidateForm).toHaveBeenCalled();
+    
+    // Error message should be displayed
+    expect(screen.getByText('Please fix the validation errors before submitting.')).toBeInTheDocument();
+  });
+  
+  it('renders the References component with correct props', () => {
+    render(<ReportForm />);
+    
+    expect(screen.getByTestId('mock-references')).toBeInTheDocument();
+    
+    const referencesDataElement = screen.getByTestId('references-data');
+    expect(JSON.parse(referencesDataElement.textContent ?? '[]')).toEqual([]);
     
     const referencesDisabledElement = screen.getByTestId('references-disabled');
     expect(referencesDisabledElement.textContent).toBe('false');

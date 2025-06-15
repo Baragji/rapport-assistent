@@ -6,6 +6,7 @@ import { convertMarkdownToDocx, generateMarkdownReport } from '../utils/document
 import type { Reference } from '../utils/documentUtils';
 import References from './References';
 import AIAssistButton from './AIAssistButton';
+import useFormValidation from '../hooks/useFormValidation';
 
 // Define the JSON schema for the form
 const schema: JSONSchema7 = {
@@ -120,8 +121,31 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
+  // Use our custom validation hook
+  const {
+    errors,
+    touched,
+    isFormValid,
+    handleBlur,
+    handleChange,
+    validateForm,
+  } = useFormValidation(formData, {
+    validateOnChange: true,
+    validateOnBlur: true,
+    validateOnMount: false,
+  });
+
   const handleSubmit = async (e: { formData?: ReportFormData }) => {
     if (!e.formData) return;
+    
+    // Validate the form before submission
+    if (!validateForm()) {
+      setMessage({
+        text: 'Please fix the validation errors before submitting.',
+        type: 'error',
+      });
+      return;
+    }
     
     const submittedData = e.formData;
     setIsSubmitting(true);
@@ -189,6 +213,42 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
     setIsGeneratingContent(false);
   };
 
+  // Handle field change with validation
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData({
+      ...formData,
+      [field]: value
+    });
+    handleChange(field, value);
+  };
+
+  // Handle field blur with validation
+  const handleFieldBlur = (field: string) => {
+    handleBlur(field);
+  };
+
+  // Get validation state for a field
+  const getValidationState = (field: string) => {
+    if (!touched[field as keyof typeof touched]) return null;
+    
+    const error = errors[field as keyof typeof errors];
+    // Check if it's a simple ValidationResult or a nested object for references
+    if ('isValid' in error) {
+      return error.isValid ? 'valid' : 'invalid';
+    }
+    
+    // For references or other complex fields, default to valid
+    return 'valid';
+  };
+
+  // Get validation class for a field
+  const getValidationClass = (field: string) => {
+    const state = getValidationState(field);
+    if (state === 'valid') return 'border-green-500 focus:ring-green-500';
+    if (state === 'invalid') return 'border-red-500 focus:ring-red-500';
+    return 'border-gray-300 focus:ring-blue-500';
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Create New Report</h2>
@@ -203,10 +263,10 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         </div>
       )}
       
-      {/* Custom field templates with AI assist buttons */}
+      {/* Custom field templates with AI assist buttons and validation */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <label htmlFor="title-input" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
             Report Title <span className="text-red-500">*</span>
           </label>
           <AIAssistButton
@@ -226,7 +286,32 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
             references={formData.references}
           />
         </div>
-        <div id="title-input" className="sr-only" aria-hidden="true"></div>
+        <div className="relative">
+          <input
+            id="title"
+            name="title"
+            type="text"
+            value={formData.title}
+            onChange={(e) => handleFieldChange('title', e.target.value)}
+            onBlur={() => handleFieldBlur('title')}
+            className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 ${getValidationClass('title')}`}
+            aria-invalid={getValidationState('title') === 'invalid'}
+            aria-describedby="title-error"
+            data-testid="title-input"
+          />
+          {getValidationState('title') === 'valid' && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
+        </div>
+        {touched.title && !errors.title.isValid && (
+          <p className="mt-2 text-sm text-red-600" id="title-error" data-testid="title-error">
+            {errors.title.message}
+          </p>
+        )}
       </div>
       
       <Form<ReportFormData>
@@ -237,10 +322,10 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
         validator={validator}
       >
-        {/* Content field with AI assist button */}
+        {/* Content field with AI assist button and validation */}
         <div className="mb-6 mt-4">
           <div className="flex justify-between items-center mb-2">
-            <label htmlFor="content-input" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="content" className="block text-sm font-medium text-gray-700">
               Report Content <span className="text-red-500">*</span>
             </label>
             <div className="flex space-x-2">
@@ -278,7 +363,32 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
               />
             </div>
           </div>
-          <div id="content-input" className="sr-only" aria-hidden="true"></div>
+          <div className="relative">
+            <textarea
+              id="content"
+              name="content"
+              value={formData.content}
+              onChange={(e) => handleFieldChange('content', e.target.value)}
+              onBlur={() => handleFieldBlur('content')}
+              rows={10}
+              className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 ${getValidationClass('content')}`}
+              aria-invalid={getValidationState('content') === 'invalid'}
+              aria-describedby="content-error"
+              data-testid="content-input"
+            />
+            {getValidationState('content') === 'valid' && (
+              <div className="absolute top-3 right-3 pointer-events-none">
+                <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+          </div>
+          {touched.content && !errors.content.isValid && (
+            <p className="mt-2 text-sm text-red-600" id="content-error" data-testid="content-error">
+              {errors.content.message}
+            </p>
+          )}
         </div>
         
         <div className="mt-6 mb-6 border-t border-gray-200 pt-6">
@@ -286,16 +396,39 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
             references={formData.references} 
             onChange={handleReferencesChange}
             disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
+            errors={errors.references}
+            touched={touched.references}
+            onBlur={(index, field) => handleBlur('references', index, field)}
           />
+        </div>
+        
+        {/* Form completion progress indicator */}
+        <div className="mt-4 mb-4">
+          <div className="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Form completion</span>
+            <span className={isFormValid ? 'text-green-600' : 'text-gray-600'}>
+              {isFormValid ? 'Ready to submit' : 'Required fields missing'}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div 
+              className={`h-2.5 rounded-full ${isFormValid ? 'bg-green-600' : 'bg-blue-600'}`}
+              style={{ width: `${isFormValid ? '100' : (touched.title && errors.title.isValid ? 50 : 0) + (touched.content && errors.content.isValid ? 50 : 0)}%` }}
+            ></div>
+          </div>
         </div>
         
         <div className="mt-4 flex justify-end">
           <button
             type="submit"
-            className={`px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors ${
+            className={`px-4 py-2 rounded ${
+              isFormValid 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-gray-400 text-white cursor-not-allowed'
+            } transition-colors ${
               isSubmitting || isGeneratingTitle || isGeneratingContent ? 'opacity-70 cursor-not-allowed' : ''
             }`}
-            disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
+            disabled={!isFormValid || isSubmitting || isGeneratingTitle || isGeneratingContent}
           >
             {isSubmitting ? 'Generating...' : 'Generate Report'}
           </button>

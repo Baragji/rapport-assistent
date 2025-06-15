@@ -6,15 +6,26 @@ The `useAI` hook provides a React-friendly way to integrate AI capabilities into
 
 ## Table of Contents
 
-1. [Installation](#installation)
-2. [Basic Usage](#basic-usage)
-3. [API Reference](#api-reference)
-4. [Options](#options)
-5. [Return Values](#return-values)
-6. [Error Handling](#error-handling)
-7. [Streaming Support](#streaming-support)
-8. [Analytics Integration](#analytics-integration)
-9. [Examples](#examples)
+- [useAI Hook API](#useai-hook-api)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Basic Usage](#basic-usage)
+  - [API Reference](#api-reference)
+    - [`useAI` Hook](#useai-hook)
+      - [Parameters](#parameters)
+      - [Return Value](#return-value)
+  - [Options](#options)
+    - [Option Details](#option-details)
+  - [Return Values](#return-values)
+    - [Return Value Details](#return-value-details)
+  - [Error Handling](#error-handling)
+  - [Streaming Support](#streaming-support)
+  - [Analytics Integration](#analytics-integration)
+  - [Examples](#examples)
+    - [Using with Template-Based Generation](#using-with-template-based-generation)
+    - [Using with Raw Prompt Generation](#using-with-raw-prompt-generation)
+    - [Using with a Custom Client](#using-with-a-custom-client)
 
 ## Installation
 

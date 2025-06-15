@@ -1,13 +1,24 @@
 import React from 'react';
 import type { Reference } from '../utils/documentUtils';
+import type { ValidationResult } from '../utils/validationUtils';
 
 interface ReferencesProps {
   references: Reference[];
   onChange: (references: Reference[]) => void;
   disabled?: boolean;
+  errors?: Record<number, Record<string, ValidationResult>>;
+  touched?: Record<number, Record<string, boolean>>;
+  onBlur?: (index: number, field: string) => void;
 }
 
-const References: React.FC<ReferencesProps> = ({ references, onChange, disabled = false }) => {
+const References: React.FC<ReferencesProps> = ({ 
+  references, 
+  onChange, 
+  disabled = false,
+  errors = {},
+  touched = {},
+  onBlur
+}) => {
   // Default empty reference
   const emptyReference: Reference = {
     title: '',
@@ -55,6 +66,27 @@ const References: React.FC<ReferencesProps> = ({ references, onChange, disabled 
       [field]: value,
     };
     onChange(updatedReferences);
+  };
+
+  // Handle field blur for validation
+  const handleFieldBlur = (index: number, field: string) => {
+    if (onBlur) {
+      onBlur(index, field);
+    }
+  };
+
+  // Get validation state for a reference field
+  const getValidationState = (index: number, field: string) => {
+    if (!touched[index] || !touched[index][field]) return null;
+    return errors[index] && errors[index][field] && !errors[index][field].isValid ? 'invalid' : 'valid';
+  };
+
+  // Get validation class for a reference field
+  const getValidationClass = (index: number, field: string) => {
+    const state = getValidationState(index, field);
+    if (state === 'valid') return 'border-green-500 focus:ring-green-500';
+    if (state === 'invalid') return 'border-red-500 focus:ring-red-500';
+    return 'border-gray-300 focus:ring-blue-500';
   };
 
   return (
@@ -123,18 +155,32 @@ const References: React.FC<ReferencesProps> = ({ references, onChange, disabled 
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`title-${index}`}>
                     Title <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    id={`title-${index}`}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={reference.title}
-                    onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
-                    disabled={disabled}
-                    required
-                    data-testid={`title-input-${index}`}
-                  />
-                  {!reference.title && (
-                    <p className="mt-1 text-sm text-red-500">Title is required</p>
+                  <div className="relative">
+                    <input
+                      id={`title-${index}`}
+                      type="text"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'title')}`}
+                      value={reference.title}
+                      onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
+                      onBlur={() => handleFieldBlur(index, 'title')}
+                      disabled={disabled}
+                      required
+                      data-testid={`title-input-${index}`}
+                      aria-invalid={getValidationState(index, 'title') === 'invalid'}
+                      aria-describedby={`title-error-${index}`}
+                    />
+                    {getValidationState(index, 'title') === 'valid' && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {touched[index]?.title && errors[index]?.title && !errors[index]?.title.isValid && (
+                    <p className="mt-1 text-sm text-red-600" id={`title-error-${index}`}>
+                      {errors[index]?.title.message}
+                    </p>
                   )}
                 </div>
 
@@ -142,18 +188,32 @@ const References: React.FC<ReferencesProps> = ({ references, onChange, disabled 
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`author-${index}`}>
                     Author <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    id={`author-${index}`}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={reference.author}
-                    onChange={(e) => handleFieldChange(index, 'author', e.target.value)}
-                    disabled={disabled}
-                    required
-                    data-testid={`author-input-${index}`}
-                  />
-                  {!reference.author && (
-                    <p className="mt-1 text-sm text-red-500">Author is required</p>
+                  <div className="relative">
+                    <input
+                      id={`author-${index}`}
+                      type="text"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'author')}`}
+                      value={reference.author}
+                      onChange={(e) => handleFieldChange(index, 'author', e.target.value)}
+                      onBlur={() => handleFieldBlur(index, 'author')}
+                      disabled={disabled}
+                      required
+                      data-testid={`author-input-${index}`}
+                      aria-invalid={getValidationState(index, 'author') === 'invalid'}
+                      aria-describedby={`author-error-${index}`}
+                    />
+                    {getValidationState(index, 'author') === 'valid' && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {touched[index]?.author && errors[index]?.author && !errors[index]?.author.isValid && (
+                    <p className="mt-1 text-sm text-red-600" id={`author-error-${index}`}>
+                      {errors[index]?.author.message}
+                    </p>
                   )}
                 </div>
 
@@ -161,68 +221,136 @@ const References: React.FC<ReferencesProps> = ({ references, onChange, disabled 
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`year-${index}`}>
                     Year
                   </label>
-                  <input
-                    id={`year-${index}`}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={reference.year || ''}
-                    onChange={(e) => handleFieldChange(index, 'year', e.target.value)}
-                    placeholder="YYYY"
-                    disabled={disabled}
-                    data-testid={`year-input-${index}`}
-                  />
+                  <div className="relative">
+                    <input
+                      id={`year-${index}`}
+                      type="text"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'year')}`}
+                      value={reference.year || ''}
+                      onChange={(e) => handleFieldChange(index, 'year', e.target.value)}
+                      onBlur={() => handleFieldBlur(index, 'year')}
+                      placeholder="YYYY"
+                      disabled={disabled}
+                      data-testid={`year-input-${index}`}
+                      aria-invalid={getValidationState(index, 'year') === 'invalid'}
+                      aria-describedby={`year-error-${index}`}
+                    />
+                    {getValidationState(index, 'year') === 'valid' && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {touched[index]?.year && errors[index]?.year && !errors[index]?.year.isValid && (
+                    <p className="mt-1 text-sm text-red-600" id={`year-error-${index}`}>
+                      {errors[index]?.year.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="form-group">
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`type-${index}`}>
-                    Type
+                    Type <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    id={`type-${index}`}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={reference.type}
-                    onChange={(e) => handleFieldChange(index, 'type', e.target.value as Reference['type'])}
-                    disabled={disabled}
-                    data-testid={`type-select-${index}`}
-                  >
-                    <option value="Article">Article</option>
-                    <option value="Book">Book</option>
-                    <option value="Website">Website</option>
-                    <option value="Journal">Journal</option>
-                    <option value="Conference">Conference</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      id={`type-${index}`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'type')}`}
+                      value={reference.type}
+                      onChange={(e) => handleFieldChange(index, 'type', e.target.value as Reference['type'])}
+                      onBlur={() => handleFieldBlur(index, 'type')}
+                      disabled={disabled}
+                      data-testid={`type-select-${index}`}
+                      aria-invalid={getValidationState(index, 'type') === 'invalid'}
+                      aria-describedby={`type-error-${index}`}
+                    >
+                      <option value="Article">Article</option>
+                      <option value="Book">Book</option>
+                      <option value="Website">Website</option>
+                      <option value="Journal">Journal</option>
+                      <option value="Conference">Conference</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    {getValidationState(index, 'type') === 'valid' && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-8 pointer-events-none">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {touched[index]?.type && errors[index]?.type && !errors[index]?.type.isValid && (
+                    <p className="mt-1 text-sm text-red-600" id={`type-error-${index}`}>
+                      {errors[index]?.type.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="form-group">
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`publisher-${index}`}>
                     Publisher
                   </label>
-                  <input
-                    id={`publisher-${index}`}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={reference.publisher || ''}
-                    onChange={(e) => handleFieldChange(index, 'publisher', e.target.value)}
-                    disabled={disabled}
-                    data-testid={`publisher-input-${index}`}
-                  />
+                  <div className="relative">
+                    <input
+                      id={`publisher-${index}`}
+                      type="text"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'publisher')}`}
+                      value={reference.publisher || ''}
+                      onChange={(e) => handleFieldChange(index, 'publisher', e.target.value)}
+                      onBlur={() => handleFieldBlur(index, 'publisher')}
+                      disabled={disabled}
+                      data-testid={`publisher-input-${index}`}
+                      aria-invalid={getValidationState(index, 'publisher') === 'invalid'}
+                      aria-describedby={`publisher-error-${index}`}
+                    />
+                    {getValidationState(index, 'publisher') === 'valid' && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {touched[index]?.publisher && errors[index]?.publisher && !errors[index]?.publisher.isValid && (
+                    <p className="mt-1 text-sm text-red-600" id={`publisher-error-${index}`}>
+                      {errors[index]?.publisher.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="form-group">
                   <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`url-${index}`}>
                     URL
                   </label>
-                  <input
-                    id={`url-${index}`}
-                    type="url"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={reference.url || ''}
-                    onChange={(e) => handleFieldChange(index, 'url', e.target.value)}
-                    placeholder="https://example.com"
-                    disabled={disabled}
-                    data-testid={`url-input-${index}`}
-                  />
+                  <div className="relative">
+                    <input
+                      id={`url-${index}`}
+                      type="url"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'url')}`}
+                      value={reference.url || ''}
+                      onChange={(e) => handleFieldChange(index, 'url', e.target.value)}
+                      onBlur={() => handleFieldBlur(index, 'url')}
+                      placeholder="https://example.com"
+                      disabled={disabled}
+                      data-testid={`url-input-${index}`}
+                      aria-invalid={getValidationState(index, 'url') === 'invalid'}
+                      aria-describedby={`url-error-${index}`}
+                    />
+                    {getValidationState(index, 'url') === 'valid' && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {touched[index]?.url && errors[index]?.url && !errors[index]?.url.isValid && (
+                    <p className="mt-1 text-sm text-red-600" id={`url-error-${index}`}>
+                      {errors[index]?.url.message}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
