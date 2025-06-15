@@ -1,10 +1,6 @@
 import { useState } from 'react';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
 import ReportForm from './components/ReportForm';
-
-// Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend);
+import PieChart from './components/PieChart';
 
 // Define the form data interface
 interface FormData {
@@ -61,20 +57,12 @@ function App() {
           <ReportForm onSubmit={handleFormSubmit} />
 
           {/* Chart Section */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Report Categories</h2>
-            <div className="h-64">
-              <Pie data={chartData} />
-            </div>
-            <div className="mt-6 p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium text-gray-700">Report Statistics</h3>
-              <ul className="mt-2 space-y-1 text-sm text-gray-600">
-                <li>Total Reports: {39 + reports.length}</li>
-                <li>Average Length: 1,250 words</li>
-                <li>Most Common Category: Technical</li>
-              </ul>
-            </div>
-          </div>
+          <PieChart 
+            data={chartData}
+            title="Report Categories"
+            showStats={true}
+            totalReports={39 + reports.length}
+          />
         </div>
 
         <footer className="mt-12 text-center text-gray-500 text-sm">
