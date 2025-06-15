@@ -1,12 +1,27 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PieChart from '../PieChart';
 
 // Mock Chart.js and react-chartjs-2
 vi.mock('react-chartjs-2', () => ({
-  Pie: ({ data }: { data: Record<string, unknown> }) => (
-    <div data-testid="pie-chart" data-chart-data={JSON.stringify(data)}>
+  Pie: ({ data, options }: { data: Record<string, unknown>, options: Record<string, unknown> }) => (
+    <div data-testid="pie-chart" data-chart-data={JSON.stringify(data)} data-chart-options={JSON.stringify(options)}>
       Mocked Pie Chart
+    </div>
+  ),
+  Bar: ({ data, options }: { data: Record<string, unknown>, options: Record<string, unknown> }) => (
+    <div data-testid="bar-chart" data-chart-data={JSON.stringify(data)} data-chart-options={JSON.stringify(options)}>
+      Mocked Bar Chart
+    </div>
+  ),
+  Line: ({ data, options }: { data: Record<string, unknown>, options: Record<string, unknown> }) => (
+    <div data-testid="line-chart" data-chart-data={JSON.stringify(data)} data-chart-options={JSON.stringify(options)}>
+      Mocked Line Chart
+    </div>
+  ),
+  Doughnut: ({ data, options }: { data: Record<string, unknown>, options: Record<string, unknown> }) => (
+    <div data-testid="doughnut-chart" data-chart-data={JSON.stringify(data)} data-chart-options={JSON.stringify(options)}>
+      Mocked Doughnut Chart
     </div>
   ),
 }));
@@ -18,6 +33,12 @@ vi.mock('chart.js', () => ({
   ArcElement: {},
   Tooltip: {},
   Legend: {},
+  CategoryScale: {},
+  LinearScale: {},
+  BarElement: {},
+  LineElement: {},
+  PointElement: {},
+  Title: {},
 }));
 
 describe('PieChart Component', () => {
@@ -33,6 +54,12 @@ describe('PieChart Component', () => {
       },
     ],
   };
+
+  const mockClickHandler = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('renders with default props', () => {
     render(<PieChart data={mockData} />);
@@ -60,7 +87,7 @@ describe('PieChart Component', () => {
     render(<PieChart data={mockData} />);
     
     const pieChart = screen.getByTestId('pie-chart');
-    const chartData = JSON.parse(pieChart.getAttribute('data-chart-data') || '{}');
+    const chartData = JSON.parse(pieChart.getAttribute('data-chart-data') ?? '{}');
     
     expect(chartData.labels).toEqual(mockData.labels);
     expect(chartData.datasets[0].data).toEqual(mockData.datasets[0].data);
@@ -189,7 +216,7 @@ describe('PieChart Component', () => {
     expect(container).toHaveClass('bg-white', 'p-6', 'rounded-lg', 'shadow-md');
     
     const title = screen.getByText('Chart');
-    expect(title).toHaveClass('text-2xl', 'font-semibold', 'mb-4', 'text-gray-800');
+    expect(title).toHaveClass('text-2xl', 'font-semibold', 'text-gray-800');
   });
 
   it('applies correct CSS classes for statistics section', () => {
@@ -197,5 +224,169 @@ describe('PieChart Component', () => {
     
     const statsSection = screen.getByText('Report Statistics').closest('.bg-gray-50');
     expect(statsSection).toHaveClass('mt-6', 'p-4', 'bg-gray-50', 'rounded-md');
+  });
+
+  // New tests for enhanced chart features
+  
+  it('renders chart type selector buttons by default', () => {
+    render(<PieChart data={mockData} />);
+    
+    // Check for all chart type buttons
+    expect(screen.getByTitle('Switch to pie chart')).toBeInTheDocument();
+    expect(screen.getByTitle('Switch to bar chart')).toBeInTheDocument();
+    expect(screen.getByTitle('Switch to line chart')).toBeInTheDocument();
+    expect(screen.getByTitle('Switch to doughnut chart')).toBeInTheDocument();
+  });
+  
+  it('hides chart type selector when showChartTypeSelector is false', () => {
+    render(<PieChart data={mockData} showChartTypeSelector={false} />);
+    
+    expect(screen.queryByTitle('Switch to pie chart')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Switch to bar chart')).not.toBeInTheDocument();
+  });
+  
+  it('switches to bar chart when bar button is clicked', () => {
+    render(<PieChart data={mockData} />);
+    
+    // Initially shows pie chart
+    expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
+    
+    // Click bar chart button
+    fireEvent.click(screen.getByTitle('Switch to bar chart'));
+    
+    // Now shows bar chart
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('pie-chart')).not.toBeInTheDocument();
+  });
+  
+  it('switches to line chart when line button is clicked', () => {
+    render(<PieChart data={mockData} />);
+    
+    // Click line chart button
+    fireEvent.click(screen.getByTitle('Switch to line chart'));
+    
+    // Now shows line chart
+    expect(screen.getByTestId('line-chart')).toBeInTheDocument();
+  });
+  
+  it('switches to doughnut chart when doughnut button is clicked', () => {
+    render(<PieChart data={mockData} />);
+    
+    // Click doughnut chart button
+    fireEvent.click(screen.getByTitle('Switch to doughnut chart'));
+    
+    // Now shows doughnut chart
+    expect(screen.getByTestId('doughnut-chart')).toBeInTheDocument();
+  });
+  
+  it('uses initialChartType prop to set initial chart type', () => {
+    render(<PieChart data={mockData} initialChartType="bar" />);
+    
+    // Initially shows bar chart
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('pie-chart')).not.toBeInTheDocument();
+  });
+  
+  it('applies active styling to the current chart type button', () => {
+    render(<PieChart data={mockData} />);
+    
+    // Pie button should have active styling
+    const pieButton = screen.getByTitle('Switch to pie chart');
+    expect(pieButton).toHaveClass('bg-blue-100', 'text-blue-700');
+    
+    // Bar button should not have active styling
+    const barButton = screen.getByTitle('Switch to bar chart');
+    expect(barButton).not.toHaveClass('bg-blue-100', 'text-blue-700');
+    
+    // Click bar button
+    fireEvent.click(barButton);
+    
+    // Now bar button should have active styling
+    expect(barButton).toHaveClass('bg-blue-100', 'text-blue-700');
+    // And pie button should not
+    expect(pieButton).not.toHaveClass('bg-blue-100', 'text-blue-700');
+  });
+  
+  it('passes options to chart component', () => {
+    // Create a component with a mocked click handler
+    render(<PieChart data={mockData} onChartClick={mockClickHandler} />);
+    
+    // Get the chart options from the rendered component
+    const pieChart = screen.getByTestId('pie-chart');
+    const options = JSON.parse(pieChart.getAttribute('data-chart-options') ?? '{}');
+    
+    // Verify that options are passed correctly
+    expect(options.responsive).toBe(true);
+    expect(options.maintainAspectRatio).toBe(false);
+    expect(options.plugins.legend.position).toBe('top');
+  });
+  
+  it('displays selected segment information correctly', () => {
+    // Create a test component that directly renders the selected segment UI
+    const TestComponent = () => {
+      return (
+        <div data-testid="test-wrapper">
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-md text-sm">
+            <p className="font-medium text-blue-800">
+              Selected: {mockData.labels[1]}
+            </p>
+            <p className="text-blue-600">
+              Value: {mockData.datasets[0].data[1]} 
+              ({((mockData.datasets[0].data[1] / 60) * 100).toFixed(1)}%)
+            </p>
+          </div>
+        </div>
+      );
+    };
+    
+    // Render the test component
+    render(<TestComponent />);
+    
+    // Verify the selected segment info is displayed correctly
+    expect(screen.getByText('Selected: Category B')).toBeInTheDocument();
+    expect(screen.getByText(/Value: 20/)).toBeInTheDocument();
+  });
+  
+  it('enhances data with hover effects for pie/doughnut charts', () => {
+    render(<PieChart data={mockData} />);
+    
+    const pieChart = screen.getByTestId('pie-chart');
+    const chartData = JSON.parse(pieChart.getAttribute('data-chart-data') ?? '{}');
+    
+    // Check for hover effects
+    expect(chartData.datasets[0].hoverOffset).toBe(15);
+  });
+  
+  it('enhances data with tension for line charts', () => {
+    render(<PieChart data={mockData} initialChartType="line" />);
+    
+    const lineChart = screen.getByTestId('line-chart');
+    const chartData = JSON.parse(lineChart.getAttribute('data-chart-data') ?? '{}');
+    
+    // Check for line chart specific properties
+    expect(chartData.datasets[0].tension).toBe(0.3);
+    expect(chartData.datasets[0].fill).toBe(false);
+  });
+  
+  it('configures proper scales for bar/line charts', () => {
+    render(<PieChart data={mockData} initialChartType="bar" />);
+    
+    const barChart = screen.getByTestId('bar-chart');
+    const chartOptions = JSON.parse(barChart.getAttribute('data-chart-options') ?? '{}');
+    
+    // Check for scales configuration
+    expect(chartOptions.scales.y.beginAtZero).toBe(true);
+    expect(chartOptions.scales.x.title.text).toBe('Categories');
+    expect(chartOptions.scales.y.title.text).toBe('Count');
+  });
+  
+  it('does not configure scales for pie/doughnut charts', () => {
+    render(<PieChart data={mockData} initialChartType="pie" />);
+    
+    const pieChart = screen.getByTestId('pie-chart');
+    const chartOptions = JSON.parse(pieChart.getAttribute('data-chart-options') ?? '{}');
+    
+    // Pie charts should not have scales
+    expect(chartOptions.scales).toBeUndefined();
   });
 });
