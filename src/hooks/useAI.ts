@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
-import { AIClient, AIError, AIErrorType } from '../services/aiClient';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import { getAIClient } from '../services/aiClientLazy';
+import type { AIClient, AIError, AIErrorType } from '../services/aiClient';
 import { promptService } from '../services/promptService';
 import type { TemplateParams } from '../services/promptService';
 
@@ -85,8 +86,20 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
   
-  // Use provided client or default to the singleton instance
-  const client = useMemo(() => options.client || new AIClient(), [options.client]);
+  // Use provided client or lazy-load the default instance
+  const clientRef = useRef<AIClient | null>(null);
+  
+  const getClient = useCallback(async (): Promise<AIClient> => {
+    if (options.client) {
+      return options.client;
+    }
+    
+    if (!clientRef.current) {
+      clientRef.current = await getAIClient();
+    }
+    
+    return clientRef.current;
+  }, [options.client]);
   
   /**
    * Reset the state of the hook
@@ -110,10 +123,14 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     setProgress(0);
     
     try {
+      // Get the AI client instance
+      const client = await getClient();
+      
       // Get the filled template
       const filledTemplate = promptService.fillTemplate(templateId, params);
       
       if (!filledTemplate) {
+        const { AIError, AIErrorType } = await import('../services/aiClient');
         throw new AIError(
           `Template with ID ${templateId} not found`,
           AIErrorType.INVALID_REQUEST,
@@ -145,6 +162,7 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
       
       return result;
     } catch (err) {
+      const { AIError, AIErrorType } = await import('../services/aiClient');
       const aiError = err instanceof AIError 
         ? err 
         : new AIError(
@@ -161,7 +179,7 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     } finally {
       setIsLoading(false);
     }
-  }, [client, options]);
+  }, [getClient, options]);
   
   /**
    * Generate content using a raw prompt
@@ -172,6 +190,9 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     setProgress(0);
     
     try {
+      // Get the AI client instance
+      const client = await getClient();
+      
       let result: string;
       
       // Use streaming if enabled
@@ -196,6 +217,7 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
       
       return result;
     } catch (err) {
+      const { AIError, AIErrorType } = await import('../services/aiClient');
       const aiError = err instanceof AIError 
         ? err 
         : new AIError(
@@ -212,7 +234,7 @@ export const useAI = (options: UseAIOptions = {}): UseAIResult => {
     } finally {
       setIsLoading(false);
     }
-  }, [client, options]);
+  }, [getClient, options]);
   
   return {
     content,
