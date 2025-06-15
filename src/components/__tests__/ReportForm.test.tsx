@@ -6,10 +6,18 @@ import ReportForm from '../ReportForm';
 
 // Mock the document utils
 vi.mock('../../utils/documentUtils', () => ({
-  generateMarkdownReport: vi.fn((title: string, content: string, category: string) => 
-    `# ${title}\n\n**Category:** ${category}\n\n${content}`
-  ),
+  generateMarkdownReport: vi.fn((title: string, content: string, category: string, references = []) => {
+    let markdown = `# ${title}\n\n**Category:** ${category}\n\n${content}`;
+    if (references.length > 0) {
+      markdown += '\n\n## References\n';
+      references.forEach((ref: { author: string; title: string }, index: number) => {
+        markdown += `${index + 1}. ${ref.author}. *${ref.title}*\n`;
+      });
+    }
+    return markdown;
+  }),
   convertMarkdownToDocx: vi.fn().mockResolvedValue(new Blob(['test'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })),
+  formatReference: vi.fn((ref: { author: string; title: string }) => `${ref.author}. *${ref.title}*`),
 }));
 
 // Mock @rjsf/core Form component with a simpler approach
@@ -72,6 +80,7 @@ describe('ReportForm Component', () => {
     expect(formData.title).toBe('');
     expect(formData.content).toBe('');
     expect(formData.category).toBe('Technical');
+    expect(formData.references).toEqual([]);
   });
 
   it('applies correct CSS classes for styling', () => {
@@ -117,6 +126,7 @@ describe('ReportForm Component', () => {
         title: '',
         content: '',
         category: 'Technical',
+        references: [],
       });
     });
   });
@@ -134,7 +144,8 @@ describe('ReportForm Component', () => {
       expect(generateMarkdownReport).toHaveBeenCalledWith(
         '',
         '',
-        'Technical'
+        'Technical',
+        []
       );
     });
   });
@@ -232,7 +243,7 @@ describe('ReportForm Component', () => {
     const { generateMarkdownReport, convertMarkdownToDocx } = await import('../../utils/documentUtils');
     
     await waitFor(() => {
-      expect(generateMarkdownReport).toHaveBeenCalledWith('', '', 'Technical');
+      expect(generateMarkdownReport).toHaveBeenCalledWith('', '', 'Technical', []);
       expect(convertMarkdownToDocx).toHaveBeenCalled();
     });
   });
@@ -268,6 +279,32 @@ describe('ReportForm Component', () => {
     expect(schema.properties.content.type).toBe('string');
     expect(schema.properties.category.type).toBe('string');
     expect(schema.properties.category.enum).toEqual(['Technical', 'Business', 'Research', 'Other']);
+    expect(schema.properties.references.type).toBe('array');
+    expect(schema.properties.references.items.type).toBe('object');
+    expect(schema.properties.references.items.required).toEqual(['title', 'author']);
+  });
+  
+  it('includes references section in schema', () => {
+    render(<ReportForm />);
+    
+    const schemaElement = screen.getByTestId('form-schema');
+    const schema = JSON.parse(schemaElement.textContent || '{}');
+    
+    // Check that references array is properly defined
+    expect(schema.properties.references.type).toBe('array');
+    expect(schema.properties.references.title).toBe('References');
+    expect(schema.properties.references.items.type).toBe('object');
+    
+    // Check reference item properties
+    const refItemProps = schema.properties.references.items.properties;
+    expect(refItemProps.title.type).toBe('string');
+    expect(refItemProps.author.type).toBe('string');
+    expect(refItemProps.year.type).toBe('string');
+    expect(refItemProps.url.type).toBe('string');
+    expect(refItemProps.url.format).toBe('uri');
+    expect(refItemProps.type.enum).toContain('Book');
+    expect(refItemProps.type.enum).toContain('Article');
+    expect(refItemProps.type.enum).toContain('Website');
   });
 
   it('logs errors to console when submission fails', async () => {

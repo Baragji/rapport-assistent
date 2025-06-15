@@ -72,28 +72,83 @@ export const isValidMarkdown = (markdown: string): boolean => {
 };
 
 /**
+ * Interface for a reference
+ */
+export interface Reference {
+  title: string;
+  author: string;
+  year?: string;
+  url?: string;
+  publisher?: string;
+  type: 'Book' | 'Article' | 'Website' | 'Journal' | 'Conference' | 'Other';
+}
+
+/**
+ * Formats a reference as a markdown string
+ * @param reference The reference to format
+ * @returns A formatted markdown string
+ */
+export const formatReference = (reference: Reference): string => {
+  let formattedRef = `${reference.author}`;
+  
+  if (reference.year) {
+    formattedRef += ` (${reference.year})`;
+  }
+  
+  formattedRef += `. *${reference.title}*`;
+  
+  if (reference.publisher) {
+    formattedRef += `. ${reference.publisher}`;
+  }
+  
+  if (reference.url) {
+    formattedRef += `. Retrieved from [${reference.url}](${reference.url})`;
+  }
+  
+  return formattedRef;
+};
+
+/**
  * Generates a sample markdown report based on form data
  * @param title The report title
  * @param content The report content
  * @param category The report category
+ * @param references Optional array of references
  * @returns A formatted markdown string
  */
 export const generateMarkdownReport = (
   title: string,
   content: string,
-  category: string
+  category: string,
+  references: Reference[] = []
 ): string => {
   const date = new Date().toLocaleDateString();
   
-  return `# ${title}
+  let report = `# ${title}
 
 ## Category: ${category}
 **Date:** ${date}
 
 ## Content
-${content}
+${content}`;
+
+  // Add references section if there are any references
+  if (references.length > 0) {
+    report += `
+
+## References
+`;
+    
+    references.forEach((reference, index) => {
+      report += `${index + 1}. ${formatReference(reference)}\n`;
+    });
+  }
+  
+  report += `
 
 ---
 *Generated with Rapport Assistent*
 `;
+  
+  return report;
 };

@@ -24,6 +24,51 @@ const schema: JSONSchema7 = {
       enum: ['Technical', 'Business', 'Research', 'Other'],
       default: 'Technical',
     },
+    references: {
+      type: 'array',
+      title: 'References',
+      description: 'Add references to your report',
+      items: {
+        type: 'object',
+        required: ['title', 'author'],
+        properties: {
+          title: {
+            type: 'string',
+            title: 'Title',
+            description: 'Title of the reference'
+          },
+          author: {
+            type: 'string',
+            title: 'Author',
+            description: 'Author of the reference'
+          },
+          year: {
+            type: 'string',
+            title: 'Year',
+            description: 'Publication year'
+          },
+          url: {
+            type: 'string',
+            title: 'URL',
+            description: 'Link to the reference (optional)',
+            format: 'uri'
+          },
+          publisher: {
+            type: 'string',
+            title: 'Publisher',
+            description: 'Publisher information (optional)'
+          },
+          type: {
+            type: 'string',
+            title: 'Type',
+            description: 'Type of reference',
+            enum: ['Book', 'Article', 'Website', 'Journal', 'Conference', 'Other'],
+            default: 'Article'
+          }
+        }
+      },
+      default: []
+    },
   },
 };
 
@@ -35,13 +80,40 @@ const uiSchema = {
       rows: 10,
     },
   },
+  references: {
+    'ui:options': {
+      addable: true,
+      removable: true,
+      orderable: true,
+    },
+    items: {
+      'ui:order': ['title', 'author', 'year', 'type', 'publisher', 'url'],
+      url: {
+        'ui:placeholder': 'https://example.com',
+      },
+      year: {
+        'ui:placeholder': 'YYYY',
+      },
+    },
+  },
 };
+
+// Define the reference interface
+interface Reference {
+  title: string;
+  author: string;
+  year?: string;
+  url?: string;
+  publisher?: string;
+  type: 'Book' | 'Article' | 'Website' | 'Journal' | 'Conference' | 'Other';
+}
 
 // Define the form data interface
 interface ReportFormData {
   title: string;
   content: string;
   category: string;
+  references: Reference[];
 }
 
 // Define props for the ReportForm component
@@ -54,6 +126,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
     title: '',
     content: '',
     category: 'Technical',
+    references: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -73,7 +146,8 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       const markdown = generateMarkdownReport(
         submittedData.title,
         submittedData.content,
-        submittedData.category
+        submittedData.category,
+        submittedData.references
       );
       
       // Convert to DOCX and download

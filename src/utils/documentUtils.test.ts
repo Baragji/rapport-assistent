@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isValidMarkdown, generateMarkdownReport, convertMarkdownToDocx } from './documentUtils';
+import { 
+  isValidMarkdown, 
+  generateMarkdownReport, 
+  convertMarkdownToDocx,
+  formatReference,
+  type Reference
+} from './documentUtils';
 
 // Mock the md-to-docx module
 vi.mock('md-to-docx');
@@ -54,6 +60,61 @@ describe('Document Utilities', () => {
     });
   });
 
+  describe('formatReference', () => {
+    it('should format a reference with all fields', () => {
+      const reference: Reference = {
+        title: 'The Art of Computer Programming',
+        author: 'Knuth, D.',
+        year: '1968',
+        publisher: 'Addison-Wesley',
+        url: 'https://example.com/knuth',
+        type: 'Book'
+      };
+      
+      const result = formatReference(reference);
+      
+      expect(result).toBe('Knuth, D. (1968). *The Art of Computer Programming*. Addison-Wesley. Retrieved from [https://example.com/knuth](https://example.com/knuth)');
+    });
+    
+    it('should format a reference without optional fields', () => {
+      const reference: Reference = {
+        title: 'Introduction to Algorithms',
+        author: 'Cormen, T.',
+        type: 'Book'
+      };
+      
+      const result = formatReference(reference);
+      
+      expect(result).toBe('Cormen, T.. *Introduction to Algorithms*');
+    });
+    
+    it('should format a reference with year but no publisher or URL', () => {
+      const reference: Reference = {
+        title: 'Clean Code',
+        author: 'Martin, R.',
+        year: '2008',
+        type: 'Book'
+      };
+      
+      const result = formatReference(reference);
+      
+      expect(result).toBe('Martin, R. (2008). *Clean Code*');
+    });
+    
+    it('should format a reference with publisher but no year or URL', () => {
+      const reference: Reference = {
+        title: 'Design Patterns',
+        author: 'Gamma, E. et al.',
+        publisher: 'Addison-Wesley',
+        type: 'Book'
+      };
+      
+      const result = formatReference(reference);
+      
+      expect(result).toBe('Gamma, E. et al.. *Design Patterns*. Addison-Wesley');
+    });
+  });
+
   describe('generateMarkdownReport', () => {
     beforeEach(() => {
       // Mock Date to return a fixed date
@@ -86,6 +147,40 @@ describe('Document Utilities', () => {
       expect(result).toContain('# ');
       expect(result).toContain('## Category: ');
       expect(result).toContain('## Content');
+    });
+    
+    it('should include references section when references are provided', () => {
+      const title = 'Test Report with References';
+      const content = 'This is the content.';
+      const category = 'Research';
+      const references: Reference[] = [
+        {
+          title: 'First Reference',
+          author: 'Author One',
+          year: '2020',
+          type: 'Article'
+        },
+        {
+          title: 'Second Reference',
+          author: 'Author Two',
+          year: '2021',
+          publisher: 'Publisher Name',
+          type: 'Book'
+        }
+      ];
+      
+      const result = generateMarkdownReport(title, content, category, references);
+      
+      expect(result).toContain('# Test Report with References');
+      expect(result).toContain('## References');
+      expect(result).toContain('1. Author One (2020)');
+      expect(result).toContain('2. Author Two (2021)');
+    });
+    
+    it('should not include references section when no references are provided', () => {
+      const result = generateMarkdownReport('Title', 'Content', 'Category', []);
+      
+      expect(result).not.toContain('## References');
     });
   });
 
