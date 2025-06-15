@@ -38,11 +38,11 @@ describe('Document Utilities', () => {
     });
 
     it('should return false for non-string inputs', () => {
-      // @ts-ignore - Testing invalid input
+      // @ts-expect-error - Testing invalid input
       expect(isValidMarkdown(null)).toBe(false);
-      // @ts-ignore - Testing invalid input
+      // @ts-expect-error - Testing invalid input
       expect(isValidMarkdown(undefined)).toBe(false);
-      // @ts-ignore - Testing invalid input
+      // @ts-expect-error - Testing invalid input
       expect(isValidMarkdown(123)).toBe(false);
     });
   });
@@ -51,7 +51,7 @@ describe('Document Utilities', () => {
     beforeEach(() => {
       // Mock Date to return a fixed date
       const mockDate = new Date(2025, 5, 15);
-      vi.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+      vi.spyOn(global, 'Date').mockImplementation(() => mockDate);
     });
 
     afterEach(() => {

@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReportForm from '../ReportForm';
@@ -8,12 +9,18 @@ vi.mock('../../utils/documentUtils', () => ({
   generateMarkdownReport: vi.fn((title: string, content: string, category: string) => 
     `# ${title}\n\n**Category:** ${category}\n\n${content}`
   ),
-  convertMarkdownToDocx: vi.fn().mockResolvedValue(undefined),
+  convertMarkdownToDocx: vi.fn().mockResolvedValue(new Blob(['test'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })),
 }));
 
 // Mock @rjsf/core Form component with a simpler approach
 vi.mock('@rjsf/core', () => ({
-  default: ({ schema, formData, onSubmit, disabled, children }: any) => (
+  default: ({ schema, formData, onSubmit, disabled, children }: {
+    schema: Record<string, unknown>;
+    formData: Record<string, unknown>;
+    onSubmit: (data: { formData?: Record<string, unknown> }) => void;
+    disabled: boolean;
+    children: React.ReactNode;
+  }) => (
     <div data-testid="rjsf-form">
       <div data-testid="form-schema" style={{ display: 'none' }}>
         {JSON.stringify(schema)}
@@ -192,7 +199,7 @@ describe('ReportForm Component', () => {
     const { convertMarkdownToDocx } = await import('../../utils/documentUtils');
     
     // Reset the mock to resolve successfully first
-    vi.mocked(convertMarkdownToDocx).mockResolvedValue(undefined);
+    vi.mocked(convertMarkdownToDocx).mockResolvedValue(new Blob(['test'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
     
     render(<ReportForm />);
     

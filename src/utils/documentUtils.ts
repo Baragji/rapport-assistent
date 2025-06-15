@@ -1,5 +1,6 @@
-// We'll use a simple approach instead of md-to-docx for now
-// import { toDocx } from 'md-to-docx';
+import { toDocx } from 'md-to-docx';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
 
 /**
  * Converts markdown content to a DOCX file and triggers download
@@ -11,12 +12,19 @@ export const convertMarkdownToDocx = async (
   fileName: string = 'report'
 ): Promise<Blob> => {
   try {
-    // Create a simple Blob as a placeholder
-    // In a real app, we would use a proper markdown-to-docx conversion
-    const docxBlob = new Blob([markdown], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    // Parse markdown to MDAST (Markdown Abstract Syntax Tree)
+    const mdast = unified().use(remarkParse).parse(markdown);
+    
+    // Convert MDAST to DOCX using md-to-docx library
+    const docxBlob = await toDocx(mdast, {
+      title: fileName,
+      creator: 'Rapport Assistent',
+      description: 'Generated report document',
+      subject: 'Report',
+    }, {});
     
     // Create a download link and trigger download
-    const url = URL.createObjectURL(docxBlob);
+    const url = URL.createObjectURL(docxBlob as Blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${fileName}.docx`;
@@ -29,7 +37,7 @@ export const convertMarkdownToDocx = async (
       URL.revokeObjectURL(url);
     }, 0);
     
-    return docxBlob;
+    return docxBlob as Blob;
   } catch (error) {
     console.error('Error converting markdown to DOCX:', error);
     throw error;

@@ -4,7 +4,7 @@ import PieChart from '../PieChart';
 
 // Mock Chart.js and react-chartjs-2
 vi.mock('react-chartjs-2', () => ({
-  Pie: ({ data }: { data: any }) => (
+  Pie: ({ data }: { data: Record<string, unknown> }) => (
     <div data-testid="pie-chart" data-chart-data={JSON.stringify(data)}>
       Mocked Pie Chart
     </div>

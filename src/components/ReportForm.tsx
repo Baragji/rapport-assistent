@@ -38,7 +38,7 @@ const uiSchema = {
 };
 
 // Define the form data interface
-interface FormData {
+interface ReportFormData {
   title: string;
   content: string;
   category: string;
@@ -46,11 +46,11 @@ interface FormData {
 
 // Define props for the ReportForm component
 interface ReportFormProps {
-  onSubmit?: (data: FormData) => void;
+  onSubmit?: (data: ReportFormData) => void;
 }
 
 const ReportForm = ({ onSubmit }: ReportFormProps) => {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<ReportFormData>({
     title: '',
     content: '',
     category: 'Technical',
@@ -58,26 +58,26 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: { formData?: ReportFormData }) => {
     if (!e.formData) return;
     
-    const formData = e.formData as FormData;
+    const submittedData = e.formData;
     setIsSubmitting(true);
     setMessage(null);
     
     try {
       // Update local state
-      setFormData(formData);
+      setFormData(submittedData);
       
       // Generate markdown report
       const markdown = generateMarkdownReport(
-        formData.title,
-        formData.content,
-        formData.category
+        submittedData.title,
+        submittedData.content,
+        submittedData.category
       );
       
       // Convert to DOCX and download
-      await convertMarkdownToDocx(markdown, formData.title);
+      await convertMarkdownToDocx(markdown, submittedData.title);
       
       // Show success message
       setMessage({
@@ -87,7 +87,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       
       // Call the onSubmit callback if provided
       if (onSubmit) {
-        onSubmit(formData);
+        onSubmit(submittedData);
       }
     } catch (error) {
       console.error('Error generating report:', error);
@@ -114,7 +114,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         </div>
       )}
       
-      <Form
+      <Form<ReportFormData>
         schema={schema}
         uiSchema={uiSchema}
         formData={formData}

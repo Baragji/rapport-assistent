@@ -4,7 +4,7 @@ import App from './App';
 
 // Mock the ReportForm component
 vi.mock('./components/ReportForm', () => ({
-  default: ({ onSubmit }: { onSubmit: (data: any) => void }) => (
+  default: ({ onSubmit }: { onSubmit: (data: Record<string, unknown>) => void }) => (
     <div data-testid="report-form">
       <h2>Create New Report</h2>
       <button onClick={() => onSubmit({ title: 'Test', content: 'Test content', category: 'Technical' })}>
