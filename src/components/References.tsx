@@ -78,7 +78,7 @@ const References: React.FC<ReferencesProps> = ({ references, onChange, disabled 
         <div className="space-y-4">
           {references.map((reference, index) => (
             <div 
-              key={index} 
+              key={`reference-${index}-${reference.title.substring(0, 10)}`} 
               className="reference-item p-4 border border-gray-200 rounded-md bg-gray-50"
               data-testid={`reference-item-${index}`}
             >

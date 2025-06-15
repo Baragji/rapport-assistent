@@ -100,7 +100,7 @@ describe('ReportForm Component', () => {
     render(<ReportForm />);
     
     const formDataElement = screen.getByTestId('form-data');
-    const formData = JSON.parse(formDataElement.textContent || '{}');
+    const formData = JSON.parse(formDataElement.textContent ?? '{}');
     
     expect(formData.title).toBe('');
     expect(formData.content).toBe('');
@@ -296,7 +296,7 @@ describe('ReportForm Component', () => {
     render(<ReportForm />);
     
     const schemaElement = screen.getByTestId('form-schema');
-    const schema = JSON.parse(schemaElement.textContent || '{}');
+    const schema = JSON.parse(schemaElement.textContent ?? '{}');
     
     expect(schema.type).toBe('object');
     expect(schema.required).toEqual(['title', 'content']);
@@ -313,7 +313,7 @@ describe('ReportForm Component', () => {
     render(<ReportForm />);
     
     const schemaElement = screen.getByTestId('form-schema');
-    const schema = JSON.parse(schemaElement.textContent || '{}');
+    const schema = JSON.parse(schemaElement.textContent ?? '{}');
     
     // Check that references array is properly defined
     expect(schema.properties.references.type).toBe('array');
@@ -338,7 +338,7 @@ describe('ReportForm Component', () => {
     expect(screen.getByTestId('mock-references')).toBeInTheDocument();
     
     const referencesDataElement = screen.getByTestId('references-data');
-    const referencesData = JSON.parse(referencesDataElement.textContent || '[]');
+    const referencesData = JSON.parse(referencesDataElement.textContent ?? '[]');
     expect(referencesData).toEqual([]);
     
     const referencesDisabledElement = screen.getByTestId('references-disabled');
@@ -354,7 +354,7 @@ describe('ReportForm Component', () => {
     
     // Check that the form data was updated
     const formDataElement = screen.getByTestId('form-data');
-    const formData = JSON.parse(formDataElement.textContent || '{}');
+    const formData = JSON.parse(formDataElement.textContent ?? '{}');
     
     expect(formData.references).toHaveLength(1);
     expect(formData.references[0].title).toBe('New Ref');

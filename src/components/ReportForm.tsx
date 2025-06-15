@@ -5,6 +5,7 @@ import validator from '@rjsf/validator-ajv8';
 import { convertMarkdownToDocx, generateMarkdownReport } from '../utils/documentUtils';
 import type { Reference } from '../utils/documentUtils';
 import References from './References';
+import AIAssistButton from './AIAssistButton';
 
 // Define the JSON schema for the form
 const schema: JSONSchema7 = {
@@ -76,10 +77,16 @@ const schema: JSONSchema7 = {
 
 // Define UI schema for better form layout
 const uiSchema = {
+  title: {
+    'ui:options': {
+      label: false, // We'll create a custom label with the AI assist button
+    },
+  },
   content: {
     'ui:widget': 'textarea',
     'ui:options': {
       rows: 10,
+      label: false, // We'll create a custom label with the AI assist button
     },
   },
   // We'll use a custom component for references, so we hide it in the form
@@ -110,6 +117,8 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
   const handleSubmit = async (e: { formData?: ReportFormData }) => {
     if (!e.formData) return;
@@ -161,6 +170,24 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       references: newReferences
     });
   };
+  
+  // Handle AI-generated title
+  const handleTitleGenerated = (generatedTitle: string) => {
+    setFormData({
+      ...formData,
+      title: generatedTitle.trim()
+    });
+    setIsGeneratingTitle(false);
+  };
+  
+  // Handle AI-generated content
+  const handleContentGenerated = (generatedContent: string) => {
+    setFormData({
+      ...formData,
+      content: generatedContent.trim()
+    });
+    setIsGeneratingContent(false);
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -176,19 +203,83 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         </div>
       )}
       
+      {/* Custom field templates with AI assist buttons */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label htmlFor="title-input" className="block text-sm font-medium text-gray-700">
+            Report Title <span className="text-red-500">*</span>
+          </label>
+          <AIAssistButton
+            templateId="introduction-academic"
+            templateParams={{
+              topic: formData.title ?? 'academic report',
+              researchQuestion: 'What are the key aspects of this topic?'
+            }}
+            onContentGenerated={handleTitleGenerated}
+            label="Generate Title"
+            size="small"
+            variant="outline"
+            disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
+            tooltip="Generate a title using AI"
+            testId="generate-title-button"
+          />
+        </div>
+        <div id="title-input" className="sr-only" aria-hidden="true"></div>
+      </div>
+      
       <Form<ReportFormData>
         schema={schema}
         uiSchema={uiSchema}
         formData={formData}
         onSubmit={handleSubmit}
-        disabled={isSubmitting}
+        disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
         validator={validator}
       >
+        {/* Content field with AI assist button */}
+        <div className="mb-6 mt-4">
+          <div className="flex justify-between items-center mb-2">
+            <label htmlFor="content-input" className="block text-sm font-medium text-gray-700">
+              Report Content <span className="text-red-500">*</span>
+            </label>
+            <div className="flex space-x-2">
+              <AIAssistButton
+                templateId="improve-clarity"
+                templateParams={{
+                  originalText: formData.content ?? ''
+                }}
+                onContentGenerated={handleContentGenerated}
+                label="Improve"
+                size="small"
+                variant="outline"
+                disabled={isSubmitting || isGeneratingTitle || isGeneratingContent || !formData.content}
+                tooltip="Improve the clarity of your content"
+                testId="improve-content-button"
+              />
+              <AIAssistButton
+                templateId="analysis-data"
+                templateParams={{
+                  topic: formData.title ?? 'the selected topic',
+                  researchQuestion: 'What are the key findings?',
+                  dataPoints: 'Generate comprehensive analysis'
+                }}
+                onContentGenerated={handleContentGenerated}
+                label="Generate Content"
+                size="small"
+                variant="outline"
+                disabled={isSubmitting || isGeneratingTitle || isGeneratingContent || !formData.title}
+                tooltip="Generate content based on the title"
+                testId="generate-content-button"
+              />
+            </div>
+          </div>
+          <div id="content-input" className="sr-only" aria-hidden="true"></div>
+        </div>
+        
         <div className="mt-6 mb-6 border-t border-gray-200 pt-6">
           <References 
             references={formData.references} 
             onChange={handleReferencesChange}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
           />
         </div>
         
@@ -196,9 +287,9 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
           <button
             type="submit"
             className={`px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors ${
-              isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+              isSubmitting || isGeneratingTitle || isGeneratingContent ? 'opacity-70 cursor-not-allowed' : ''
             }`}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
           >
             {isSubmitting ? 'Generating...' : 'Generate Report'}
           </button>

@@ -1,5 +1,4 @@
-import type { PromptTemplate } from '../services/promptService';
-import { TemplateCategory, type TemplateCategoryType } from '../services/promptService';
+import { TemplateCategory, type PromptTemplate, type TemplateCategoryType } from '../services/promptService';
 
 /**
  * Interface for JSON template files
