@@ -147,9 +147,9 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
   
   // Size classes
   const sizeClasses = {
-    small: 'px-2 py-1 text-xs',
-    medium: 'px-3 py-1.5 text-sm',
-    large: 'px-4 py-2 text-base',
+    small: 'px-2 py-1 text-xs min-h-[36px] min-w-[36px]',
+    medium: 'px-3 py-1.5 text-sm min-h-[40px] min-w-[40px]',
+    large: 'px-4 py-2 text-base min-h-[44px] min-w-[44px]',
   };
   
   // Variant classes
@@ -198,7 +198,10 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
     // Add references context if available
     if (references && references.length > 0) {
       const referencesText = references
-        .map(ref => `- ${ref.title} by ${ref.author}${ref.year ? ` (${ref.year})` : ''}`)
+        .map(ref => {
+          const yearText = ref.year ? ` (${ref.year})` : '';
+          return `- ${ref.title} by ${ref.author}${yearText}`;
+        })
         .join('\n');
       
       enhancedParams.references = referencesText;
@@ -253,7 +256,7 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
   };
   
   return (
-    <div className="ai-assist-button-container">
+    <div className="ai-assist-button-container w-full xs:w-auto">
       <button
         type="button"
         className={buttonClasses}
@@ -263,7 +266,7 @@ const AIAssistButton: React.FC<AIAssistButtonProps> = ({
         data-testid={testId}
       >
         {renderButtonIcon()}
-        {label}
+        <span className="whitespace-nowrap">{label}</span>
       </button>
       
       {renderProgressBar()}

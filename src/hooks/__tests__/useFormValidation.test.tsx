@@ -41,7 +41,7 @@ describe('useFormValidation', () => {
     );
     
     expect(result.current.errors.content.isValid).toBe(false);
-    expect(result.current.errors.content.message).toBe('Report content must be at least 10 characters');
+    expect(result.current.errors.content.message).toBe('Report content must be at least 10 characters (5 more needed)');
     expect(result.current.isFormValid).toBe(false);
   });
 

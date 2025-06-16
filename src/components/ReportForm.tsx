@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Form from '@rjsf/core';
 import type { JSONSchema7 } from 'json-schema';
 import validator from '@rjsf/validator-ajv8';
@@ -6,7 +6,7 @@ import { convertMarkdownToDocx, generateMarkdownReport } from '../utils/document
 import type { Reference } from '../utils/documentUtils';
 import References from './References';
 import AIAssistButton from './AIAssistButton';
-import useFormValidation from '../hooks/useFormValidation';
+import useFormValidation, { type FieldValidationRules } from '../hooks/useFormValidation';
 
 // Define the JSON schema for the form
 const schema: JSONSchema7 = {
@@ -96,6 +96,22 @@ const uiSchema = {
   },
 };
 
+// Define custom validation rules
+const validationRules: FieldValidationRules = {
+  title: {
+    required: true,
+    minLength: 3,
+    maxLength: 100,
+    timing: 'delayed',
+  },
+  content: {
+    required: true,
+    minLength: 10,
+    maxLength: 10000,
+    timing: 'delayed',
+  },
+};
+
 // Define the form data interface
 interface ReportFormData {
   title: string;
@@ -117,23 +133,45 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
     references: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  const [characterCount, setCharacterCount] = useState({ title: 0, content: 0 });
 
-  // Use our custom validation hook
+  // Use our enhanced validation hook
   const {
     errors,
     touched,
+    dirty,
     isFormValid,
+    validationProgress,
+    fieldFocus,
+    handleFocus,
     handleBlur,
     handleChange,
     validateForm,
+    validateField,
+    calculateProgress,
   } = useFormValidation(formData, {
     validateOnChange: true,
     validateOnBlur: true,
     validateOnMount: false,
-  });
+    validationDelay: 300,
+    showSuccessMessages: true,
+  }, validationRules);
+
+  // Update character counts when form data changes
+  useEffect(() => {
+    setCharacterCount({
+      title: formData.title.length,
+      content: formData.content.length,
+    });
+  }, [formData.title, formData.content]);
+
+  // Calculate progress width for the progress bar
+  const getProgressWidth = () => {
+    return `${validationProgress}%`;
+  };
 
   const handleSubmit = async (e: { formData?: ReportFormData }) => {
     if (!e.formData) return;
@@ -197,20 +235,40 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   
   // Handle AI-generated title
   const handleTitleGenerated = (generatedTitle: string) => {
+    const newTitle = generatedTitle.trim();
     setFormData({
       ...formData,
-      title: generatedTitle.trim()
+      title: newTitle
     });
     setIsGeneratingTitle(false);
+    
+    // Validate the field after AI generation
+    const validationResult = validateField('title', newTitle);
+    if (!validationResult.isValid) {
+      setMessage({
+        text: `Generated title needs attention: ${validationResult.message}`,
+        type: 'warning',
+      });
+    }
   };
   
   // Handle AI-generated content
   const handleContentGenerated = (generatedContent: string) => {
+    const newContent = generatedContent.trim();
     setFormData({
       ...formData,
-      content: generatedContent.trim()
+      content: newContent
     });
     setIsGeneratingContent(false);
+    
+    // Validate the field after AI generation
+    const validationResult = validateField('content', newContent);
+    if (!validationResult.isValid) {
+      setMessage({
+        text: `Generated content needs attention: ${validationResult.message}`,
+        type: 'warning',
+      });
+    }
   };
 
   // Handle field change with validation
@@ -220,11 +278,21 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       [field]: value
     });
     handleChange(field, value);
+    
+    // Clear any messages when user starts typing
+    if (message && dirty[field as keyof typeof dirty]) {
+      setMessage(null);
+    }
   };
 
   // Handle field blur with validation
   const handleFieldBlur = (field: string) => {
-    handleBlur(field);
+    handleBlur(field, undefined, undefined);
+  };
+  
+  // Handle field focus
+  const handleFieldFocus = (field: string) => {
+    handleFocus(field);
   };
 
   // Get validation state for a field
@@ -234,7 +302,10 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
     const error = errors[field as keyof typeof errors];
     // Check if it's a simple ValidationResult or a nested object for references
     if ('isValid' in error) {
-      return error.isValid ? 'valid' : 'invalid';
+      // Check severity first, even if isValid is false
+      if (error.severity === 'warning') return 'warning';
+      if (!error.isValid) return 'invalid';
+      return 'valid';
     }
     
     // For references or other complex fields, default to valid
@@ -245,27 +316,89 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   const getValidationClass = (field: string) => {
     const state = getValidationState(field);
     if (state === 'valid') return 'border-green-500 focus:ring-green-500';
+    if (state === 'warning') return 'border-yellow-500 focus:ring-yellow-500';
     if (state === 'invalid') return 'border-red-500 focus:ring-red-500';
+    
+    // Add focus highlight when field is focused
+    if (fieldFocus === field) return 'border-blue-500 focus:ring-blue-500 ring-2 ring-blue-200';
+    
     return 'border-gray-300 focus:ring-blue-500';
+  };
+  
+  // Get validation icon for a field
+  const getValidationIcon = (field: string) => {
+    const state = getValidationState(field);
+    
+    if (state === 'valid') {
+      return (
+        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+      );
+    }
+    
+    if (state === 'warning') {
+      return (
+        <svg className="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+      );
+    }
+    
+    if (state === 'invalid') {
+      return (
+        <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+      );
+    }
+    
+    return null;
+  };
+  
+  // Get validation message color class
+  const getValidationMessageClass = (field: string) => {
+    const state = getValidationState(field);
+    if (state === 'valid') return 'text-green-600';
+    if (state === 'warning') return 'text-yellow-600';
+    if (state === 'invalid') return 'text-red-600';
+    return '';
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">Create New Report</h2>
+    <div className="card-responsive">
+      <h2 className="text-title-responsive mb-4 text-gray-800">Create New Report</h2>
       
       {message && (
         <div
-          className={`mb-4 p-3 rounded ${
-            message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          className={`mb-4 p-3 rounded flex items-start gap-2 ${
+            message.type === 'success' ? 'bg-green-100 text-green-700' : 
+            message.type === 'warning' ? 'bg-yellow-100 text-yellow-700' : 
+            'bg-red-100 text-red-700'
           }`}
         >
-          {message.text}
+          {message.type === 'success' && (
+            <svg className="h-5 w-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+          )}
+          {message.type === 'warning' && (
+            <svg className="h-5 w-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          )}
+          {message.type === 'error' && (
+            <svg className="h-5 w-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+          )}
+          <span>{message.text}</span>
         </div>
       )}
       
       {/* Custom field templates with AI assist buttons and validation */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
+      <div className="form-group-responsive">
+        <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-2 gap-2">
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
             Report Title <span className="text-red-500">*</span>
           </label>
@@ -294,23 +427,47 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
             value={formData.title}
             onChange={(e) => handleFieldChange('title', e.target.value)}
             onBlur={() => handleFieldBlur('title')}
-            className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 ${getValidationClass('title')}`}
+            onFocus={() => handleFieldFocus('title')}
+            className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 min-h-[44px] px-3 py-2 ${getValidationClass('title')}`}
             aria-invalid={getValidationState('title') === 'invalid'}
             aria-describedby="title-error"
             data-testid="title-input"
+            placeholder="Enter a descriptive title for your report"
           />
-          {getValidationState('title') === 'valid' && (
+          {getValidationState('title') && (
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
+              {getValidationIcon('title')}
             </div>
           )}
         </div>
-        {touched.title && !errors.title.isValid && (
-          <p className="mt-2 text-sm text-red-600" id="title-error" data-testid="title-error">
-            {errors.title.message}
+        <div className="flex justify-between mt-1">
+          {touched.title && errors.title.message && (
+            <p className={`text-sm ${getValidationMessageClass('title')}`} id="title-error" data-testid="title-error">
+              {errors.title.message}
+            </p>
+          )}
+          <p className="text-xs text-gray-500 ml-auto">
+            {characterCount.title}/{validationRules.title.maxLength} characters
           </p>
+        </div>
+        
+        {/* Show suggestions if available */}
+        {touched.title && errors.title.suggestions && errors.title.suggestions.length > 0 && (
+          <div className="mt-1">
+            <p className="text-xs text-gray-700">Suggestions:</p>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {errors.title.suggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 rounded px-2 py-1"
+                  onClick={() => handleFieldChange('title', suggestion)}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
       
@@ -323,12 +480,12 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         validator={validator}
       >
         {/* Content field with AI assist button and validation */}
-        <div className="mb-6 mt-4">
-          <div className="flex justify-between items-center mb-2">
+        <div className="form-group-responsive mt-4">
+          <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-2 gap-2">
             <label htmlFor="content" className="block text-sm font-medium text-gray-700">
               Report Content <span className="text-red-500">*</span>
             </label>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <AIAssistButton
                 templateId="improve-clarity"
                 templateParams={{
@@ -370,28 +527,33 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
               value={formData.content}
               onChange={(e) => handleFieldChange('content', e.target.value)}
               onBlur={() => handleFieldBlur('content')}
-              rows={10}
-              className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 ${getValidationClass('content')}`}
+              onFocus={() => handleFieldFocus('content')}
+              rows={8}
+              className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 px-3 py-2 ${getValidationClass('content')}`}
               aria-invalid={getValidationState('content') === 'invalid'}
               aria-describedby="content-error"
               data-testid="content-input"
+              placeholder="Enter your report content here. You can use Markdown formatting."
             />
-            {getValidationState('content') === 'valid' && (
+            {getValidationState('content') && (
               <div className="absolute top-3 right-3 pointer-events-none">
-                <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+                {getValidationIcon('content')}
               </div>
             )}
           </div>
-          {touched.content && !errors.content.isValid && (
-            <p className="mt-2 text-sm text-red-600" id="content-error" data-testid="content-error">
-              {errors.content.message}
+          <div className="flex justify-between mt-1">
+            {touched.content && errors.content.message && (
+              <p className={`text-sm ${getValidationMessageClass('content')}`} id="content-error" data-testid="content-error">
+                {errors.content.message}
+              </p>
+            )}
+            <p className="text-xs text-gray-500 ml-auto">
+              {characterCount.content}/{validationRules.content.maxLength} characters
             </p>
-          )}
+          </div>
         </div>
         
-        <div className="mt-6 mb-6 border-t border-gray-200 pt-6">
+        <div className="spacing-responsive border-t border-gray-200 pt-4 xs:pt-6">
           <References 
             references={formData.references} 
             onChange={handleReferencesChange}
@@ -404,24 +566,26 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         
         {/* Form completion progress indicator */}
         <div className="mt-4 mb-4">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="flex flex-col xs:flex-row justify-between text-sm text-gray-600 mb-1 gap-1">
             <span>Form completion</span>
             <span className={isFormValid ? 'text-green-600' : 'text-gray-600'}>
-              {isFormValid ? 'Ready to submit' : 'Required fields missing'}
+              {isFormValid ? 'Ready to submit' : `${validationProgress}% complete`}
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
             <div 
-              className={`h-2.5 rounded-full ${isFormValid ? 'bg-green-600' : 'bg-blue-600'}`}
-              style={{ width: `${isFormValid ? '100' : (touched.title && errors.title.isValid ? 50 : 0) + (touched.content && errors.content.isValid ? 50 : 0)}%` }}
+              className={`h-2.5 rounded-full transition-all duration-300 ease-out ${
+                isFormValid ? 'bg-green-600' : 'bg-blue-600'
+              }`}
+              style={{ width: getProgressWidth() }}
             ></div>
           </div>
         </div>
         
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-center xs:justify-end">
           <button
             type="submit"
-            className={`px-4 py-2 rounded ${
+            className={`btn-touch rounded w-full xs:w-auto ${
               isFormValid 
                 ? 'bg-blue-600 text-white hover:bg-blue-700' 
                 : 'bg-gray-400 text-white cursor-not-allowed'

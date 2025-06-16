@@ -60,7 +60,8 @@ describe('validationUtils', () => {
     });
 
     it('should return appropriate error messages', () => {
-      expect(validateMinLength('ab', 3, 'Content').message).toBe('Content must be at least 3 characters');
+      const result = validateMinLength('ab', 3, 'Content');
+      expect(result.message).toBe('Content must be at least 3 characters (1 more needed)');
       expect(validateMinLength('abc', 3, 'Content').message).toBe('');
     });
   });
