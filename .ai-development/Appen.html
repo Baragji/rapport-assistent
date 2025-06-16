@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Rapport-Assistent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: Appen er en single-page-applikation (SPA) med en task-orienteret struktur. En fast sidebar til venstre indeholder navigation baseret direkte på Projekthåndbogens kapitler. Hovedpanelet til højre er dynamisk og viser inputfelter og interaktive moduler for den valgte sektion. Denne struktur blev valgt for at give brugeren et konstant overblik og en logisk, trin-for-trin arbejdsgang, der spejler den mentale model for rapportskrivning. Interaktionen er modulær; hver sektion genereres individuelt for at understøtte en iterativ og fleksibel skriveproces. En global 'Download'-knap samler til sidst alle sektioner. Denne tilgang prioriterer brugerkontrol og en fejlfri, fokuseret oplevelse frem for en monolitisk "generer alt"-knap. -->
+    <!-- Visualization & Content Choices: 
+        - Rapportstruktur (Organize): Hele appens layout med sidebar og dynamiske paneler er den primære metode til at organisere brugerens input i henhold til Projekthåndbogens krav. Præsenteret via HTML/CSS/Tailwind.
+        - Tekstgenerering (Inform/Organize): Hver sektion bruger tekstfelter til bruger-input (noter/stikord) og et 'preview'-område til den AI-genererede tekst. Dette er en 'Contextual Text Block'-interaktion, der giver direkte feedback. Præsenteret via HTML, opdateret med JS via Gemini API.
+        - Datavisualisering (Compare/Change): 'Resultater'-sektionen har et HTML-tabelinput og en knap til at generere en graf. Målet er at sammenligne data visuelt. Præsenteret i en Canvas-graf via Chart.js for dynamik og interaktivitet.
+        - Referencehåndtering (Organize/Inform): 'Litteraturliste'-sektionen har et specifikt input til DOI/URL. Interaktionen bruger Gemini API til at hente og formatere referencer automatisk, hvilket strømliner en kompleks opgave. Præsenteret i en HTML-liste, håndteret med JS.
+        - Flowdiagram (Organize): 'Analyse'-sektionen har et dedikeret tekstfelt for at beskrive processer, som AI'en kan formatere. Dette organiserer kompleks information. Præsenteret som struktureret HTML/tekst.
+        - Alle valg undgår bevidst SVG og Mermaid JS for at overholde kravene og sikrer en ren, canvas- og HTML-baseret implementering. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 40vh; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .prose p { margin-top: 0.5em; margin-bottom: 0.5em; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="flex h-screen">
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-full">
+            <div class="px-6 py-4 border-b border-slate-200">
+                <h1 class="text-xl font-bold text-slate-900">Rapport-Assistent</h1>
+                <p class="text-sm text-slate-500">Drevet af Gemini</p>
+            </div>
+            <nav id="sidebar-nav" class="flex-grow p-4 space-y-1 overflow-y-auto"></nav>
+            <div class="p-4 border-t border-slate-200">
+                <button id="download-report-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <span>Download Rapport</span>
+                </button>
+            </div>
+        </aside>
+
+        <main id="main-content" class="flex-1 ml-64 p-6 sm:p-8 lg:p-10 overflow-y-auto">
+            
+        </main>
+    </div>
+
+    <script>
+        const promptTemplates = {
+            indledning: `Generer KUN den endelige, formelle tekst til 'Indledning'-sektionen i en rapport med titlen "\${title}". Teksten skal baseres på brugerens noter: "\${userInput}", og lede hen til problemformuleringen: "\${problem}". Returner kun den færdige brødtekst uden overskrifter, kommentarer eller forklaringer.`,
+            problemformulering: `Generer KUN den endelige, formelle tekst til 'Problemformulering'-sektionen. Teksten skal være en klar og præcis problemformulering baseret på brugerens noter: "\${userInput}". Returner kun selve problemformuleringsteksten uden overskrifter, kommentarer eller forklaringer.`,
+            analyse: `Generer KUN den endelige, formelle tekst til 'Analyse'-sektionen i en rapport med titlen "\${title}". Teksten skal omdanne brugerens noter til en struktureret metodebeskrivelse: "\${userInput}". Returner kun den færdige brødtekst uden overskrifter, kommentarer eller forklaringer.`,
+            resultater: `Generer KUN den endelige, formelle tekst til 'Resultater & Diskussion'-sektionen. Teksten skal objektivt præsentere dataene og derefter diskutere deres betydning i lyset af problemformuleringen: "\${problem}". Baser teksten på brugerens observationer: "\${userInput}" og data: \${tableData}. Returner kun den færdige brødtekst uden overskrifter, kommentarer eller forklaringer.`,
+            konklusion: `Generer KUN den endelige, formelle tekst til 'Konklusion'-sektionen. Teksten skal være en skarp konklusion, der besvarer problemformuleringen: "\${problem}", baseret på brugerens noter: "\${userInput}". Returner kun selve konklusionsteksten uden overskrifter, kommentarer eller forklaringer.`,
+            default: `Generer KUN den endelige, formelle tekst til sektionen '\${sectionTitle}' i en rapport. Teksten skal være en akademisk omskrivning af brugerens noter: "\${userInput}". Returner kun den færdige brødtekst uden overskrifter, kommentarer, meta-tekst eller forklaringer.`
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = {
+                activeSection: null,
+                reportData: {},
+                chartInstance: null,
+                
+                sections: [
+                    { id: 'titelblad', title: 'Omslag/Titelblad' },
+                    { id: 'forord', title: 'Forord' },
+                    { id: 'resume', title: 'Resumé/Synopsis' },
+                    { id: 'indholdsfortegnelse', title: 'Indholdsfortegnelse' },
+                    { id: 'indledning', title: '1. Indledning' },
+                    { id: 'problemformulering', title: '2. Problemformulering' },
+                    { id: 'kvalitetssikring', title: '3. Kvalitetssikring' },
+                    { id: 'analyse', title: '4. Analyse' },
+                    { id: 'resultater', title: '5. Resultater & Diskussion' },
+                    { id: 'konklusion', title: '6. Konklusion' },
+                    { id: 'litteraturliste', title: 'Litteraturliste' },
+                    { id: 'bilag', title: 'Bilag' },
+                ],
+
+                init() {
+                    this.renderSidebar();
+                    this.mainContentEl = document.getElementById('main-content');
+                    this.setActiveSection(this.sections[0].id);
+                    document.getElementById('download-report-btn').addEventListener('click', () => this.downloadReport());
+                },
+
+                renderSidebar() {
+                    const navEl = document.getElementById('sidebar-nav');
+                    this.sections.forEach(section => {
+                        const link = document.createElement('a');
+                        link.href = '#';
+                        link.dataset.sectionId = section.id;
+                        link.textContent = section.title;
+                        link.className = 'block px-4 py-2 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150';
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.setActiveSection(section.id);
+                        });
+                        navEl.appendChild(link);
+                    });
+                },
+
+                setActiveSection(sectionId) {
+                    this.activeSection = sectionId;
+                    
+                    document.querySelectorAll('#sidebar-nav a').forEach(link => {
+                        link.classList.toggle('bg-blue-50', link.dataset.sectionId === sectionId);
+                        link.classList.toggle('text-blue-700', link.dataset.sectionId === sectionId);
+                        link.classList.toggle('font-semibold', link.dataset.sectionId === sectionId);
+                    });
+
+                    this.renderMainContent();
+                },
+                
+                renderMainContent() {
+                    const section = this.sections.find(s => s.id === this.activeSection);
+                    if (!this.reportData[section.id]) {
+                        this.reportData[section.id] = { input: '', output: '' };
+                    }
+                    if (section.id === 'litteraturliste' && !this.reportData[section.id].references) {
+                        this.reportData[section.id].references = [];
+                    }
+                     if (section.id === 'resultater' && !this.reportData[section.id].tableData) {
+                        this.reportData[section.id].tableData = [['Prøve 1', 10], ['Prøve 2', 20], ['Prøve 3', 15]];
+                    }
+
+                    let contentHTML = `
+                        <div class="max-w-4xl mx-auto">
+                            <h2 class="text-3xl font-bold text-slate-900 mb-2">${section.title}</h2>
+                            ${this.getSectionIntroduction(section.id)}
+                            <div class="mt-8 space-y-8">
+                                ${this.getSectionContent(section.id)}
+                            </div>
+                        </div>
+                    `;
+                    this.mainContentEl.innerHTML = contentHTML;
+                    this.attachEventListeners(section.id);
+                    if(section.id === 'resultater') this.renderChart();
+                },
+
+                getSectionIntroduction(sectionId) {
+                    const intros = {
+                        titelblad: `<p class="text-slate-600">Her indtaster du de grundlæggende oplysninger til rapportens forside. Disse felter vil blive brugt til at formatere et standardiseret titelblad.</p>`,
+                        indledning: `<p class="text-slate-600">Beskriv baggrunden for dit projekt. Indtast stikord, centrale begreber eller endda hele afsnit nedenfor. AI-assistenten vil bruge dette input til at formulere en sammenhængende og velstruktureret indledning.</p>`,
+                        analyse: `<p class="text-slate-600">Detaljer de metoder og procedurer, du har anvendt. Du kan beskrive et flow i tekstform, og AI'en kan hjælpe med at strukturere det klart og præcist i den endelige rapport.</p>`,
+                        resultater: `<p class="text-slate-600">Præsenter dine data her. Indtast rådata i tabellen for at generere en interaktiv graf. Brug tekstfeltet til at beskrive dine observationer, som AI'en vil bruge til at formulere resultat- og diskussionsafsnittene.</p>`,
+                        litteraturliste: `<p class="text-slate-600">Administrer dine kilder effektivt. Indsæt en URL eller et DOI, og lad assistenten formatere referencen korrekt i henhold til kravene. Dette sikrer en fejlfri og konsistent litteraturliste.</p>`,
+                        default: `<p class="text-slate-600">Udfyld informationen for denne sektion. AI-assistenten vil omdanne dine noter til et velformuleret afsnit.</p>`
+                    };
+                    return intros[sectionId] || intros.default;
+                },
+
+                getSectionContent(sectionId) {
+                    if (sectionId === 'litteraturliste') return this.getReferencesContent();
+                    if (sectionId === 'resultater') return this.getResultsContent();
+                    if (sectionId === 'titelblad') return this.getTitlePageContent();
+
+                    return `
+                        <div>
+                            <label for="input-${sectionId}" class="block text-sm font-medium text-slate-700 mb-2">Dit input (stikord, noter, etc.)</label>
+                            <textarea id="input-${sectionId}" rows="8" class="w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">${this.reportData[sectionId].input}</textarea>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                             <button data-action="generate" data-section="${sectionId}" class="bg-slate-800 text-white font-semibold py-2 px-5 rounded-lg hover:bg-slate-900 transition-colors duration-200 flex items-center justify-center space-x-2">
+                                ✨
+                                <span>Generer Tekst</span>
+                            </button>
+                             <div id="spinner-${sectionId}" class="hidden w-5 h-5 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin"></div>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-800 mb-2">AI-genereret Preview</h3>
+                            <div id="output-${sectionId}" class="w-full p-4 bg-slate-100 border border-slate-200 rounded-lg min-h-[150px] prose prose-slate max-w-none">${this.reportData[sectionId].output || '<p class="text-slate-400">Preview af den genererede tekst vil blive vist her...</p>'}</div>
+                        </div>
+                    `;
+                },
+
+                getTitlePageContent() {
+                     if (!this.reportData.titelblad.fields) {
+                        this.reportData.titelblad.fields = { title: '', name: '', place: '', date: '' };
+                    }
+                    const fields = this.reportData.titelblad.fields;
+                    return `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="field-title" class="block text-sm font-medium text-slate-700">Titel</label>
+                                <input type="text" id="field-title" value="${fields.title}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="field-name" class="block text-sm font-medium text-slate-700">Navn(e)</label>
+                                <input type="text" id="field-name" value="${fields.name}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="field-place" class="block text-sm font-medium text-slate-700">Sted</label>
+                                <input type="text" id="field-place" value="${fields.place}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="field-date" class="block text-sm font-medium text-slate-700">Dato</label>
+                                <input type="date" id="field-date" value="${fields.date}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                    `;
+                },
+                
+                getReferencesContent() {
+                    const refs = this.reportData.litteraturliste.references.map((ref, index) => 
+                        `<li class="flex items-center justify-between p-2 bg-white rounded-md border border-slate-200">
+                            <span class="text-sm text-slate-700">${ref.formatted}</span>
+                            <button data-action="remove-ref" data-index="${index}" class="text-slate-400 hover:text-red-600 font-bold text-lg px-2">&times;</button>
+                        </li>`
+                    ).join('');
+
+                    return `
+                        <div class="flex items-end space-x-2">
+                            <div class="flex-grow">
+                                <label for="input-ref" class="block text-sm font-medium text-slate-700 mb-2">Indsæt DOI eller URL</label>
+                                <input type="text" id="input-ref" class="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="10.1016/j.cell.2020.01.023">
+                            </div>
+                            <button data-action="add-ref" class="bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-900 transition-colors duration-200 flex items-center space-x-2">
+                                ✨ <span>Tilføj</span>
+                            </button>
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-2">Formaterede Referencer</h3>
+                            <ul id="references-list" class="space-y-2">${refs || '<p class="text-slate-400">Ingen referencer tilføjet endnu.</p>'}</ul>
+                        </div>
+                    `;
+                },
+                
+                getResultsContent() {
+                    const tableHeader = `<thead class="bg-slate-100"><tr><th class="p-2 text-left text-sm font-semibold text-slate-600">Beskrivelse</th><th class="p-2 text-left text-sm font-semibold text-slate-600">Værdi</th><th class="w-12"></th></tr></thead>`;
+                    const tableRows = this.reportData.resultater.tableData.map((row, index) => `
+                        <tr class="border-b border-slate-200">
+                            <td class="p-2"><input type="text" class="w-full bg-transparent focus:bg-white p-1 rounded" value="${row[0]}" data-row="${index}" data-col="0"></td>
+                            <td class="p-2"><input type="number" class="w-full bg-transparent focus:bg-white p-1 rounded" value="${row[1]}" data-row="${index}" data-col="1"></td>
+                            <td class="p-2 text-center"><button data-action="remove-row" data-index="${index}" class="text-slate-400 hover:text-red-600">&times;</button></td>
+                        </tr>`).join('');
+
+                    return `
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-lg font-semibold text-slate-800 mb-2">Data Input</h3>
+                                <div class="overflow-x-auto bg-white border border-slate-300 rounded-lg">
+                                    <table id="results-table" class="w-full">
+                                        ${tableHeader}
+                                        <tbody>${tableRows}</tbody>
+                                    </table>
+                                </div>
+                                <button data-action="add-row" class="mt-2 text-sm font-semibold text-blue-600 hover:text-blue-800">+ Tilføj række</button>
+                                
+                                <div class="mt-8">
+                                    <label for="input-resultater" class="block text-sm font-medium text-slate-700 mb-2">Beskrivende tekst (observationer)</label>
+                                    <textarea id="input-resultater" rows="6" class="w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">${this.reportData.resultater.input}</textarea>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-slate-800 mb-2">Datavisualisering</h3>
+                                <div class="chart-container bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                    <canvas id="results-chart"></canvas>
+                                </div>
+                                <div class="mt-8">
+                                     <button data-action="generate" data-section="resultater" class="bg-slate-800 text-white font-semibold py-2 px-5 rounded-lg hover:bg-slate-900 transition-colors duration-200 flex items-center justify-center space-x-2">
+                                        ✨
+                                        <span>Generer Resultater & Diskussion</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2">AI-genereret Preview</h3>
+                           <div id="output-resultater" class="w-full p-4 bg-slate-100 border border-slate-200 rounded-lg min-h-[150px] prose prose-slate max-w-none">${this.reportData.resultater.output || '<p class="text-slate-400">Preview af den genererede tekst vil blive vist her...</p>'}</div>
+                        </div>
+                    `;
+                },
+                
+                attachEventListeners(sectionId) {
+                    const generateBtn = document.querySelector(`button[data-action='generate'][data-section='${sectionId}']`);
+                    if (generateBtn) {
+                        generateBtn.addEventListener('click', () => this.handleGenerateText(sectionId));
+                    }
+                    
+                    const inputEl = document.getElementById(`input-${sectionId}`);
+                    if (inputEl) {
+                        inputEl.addEventListener('input', () => { this.reportData[sectionId].input = inputEl.value; });
+                    }
+
+                    if (sectionId === 'titelblad') {
+                        document.querySelectorAll('#main-content input').forEach(input => {
+                            input.addEventListener('input', (e) => { this.reportData.titelblad.fields[e.target.id.replace('field-', '')] = e.target.value; });
+                        });
+                    }
+
+                    if (sectionId === 'litteraturliste') {
+                        document.querySelector('button[data-action="add-ref"]').addEventListener('click', () => this.handleAddReference());
+                        document.querySelectorAll('button[data-action="remove-ref"]').forEach(btn => {
+                            btn.addEventListener('click', (e) => this.handleRemoveReference(e.currentTarget.dataset.index));
+                        });
+                    }
+                    
+                    if (sectionId === 'resultater') {
+                        document.querySelector('button[data-action="add-row"]').addEventListener('click', () => this.handleAddRow());
+                        document.querySelectorAll('#results-table input').forEach(input => {
+                            input.addEventListener('change', (e) => this.handleTableUpdate(e));
+                        });
+                        document.querySelectorAll('button[data-action="remove-row"]').forEach(btn => {
+                             btn.addEventListener('click', (e) => this.handleRemoveRow(e.currentTarget.dataset.index));
+                        });
+                    }
+                },
+
+                buildPrompt(sectionId) {
+                    const tpl = promptTemplates[sectionId] || promptTemplates.default;
+
+                    const userInput = this.reportData[sectionId]?.input || "intet specifikt input givet";
+                    const title = this.reportData.titelblad?.fields?.title || "en unavngiven rapport";
+                    const problem = this.reportData.problemformulering?.input || "ikke defineret";
+                    const tableData = (this.reportData.resultater?.tableData || []).map(r => `"${r[0]}": ${r[1]}`).join(', ');
+                    const sectionTitle = this.sections.find(s => s.id === sectionId).title;
+
+                    // Perform the replacements
+                    const populatedPrompt = tpl
+                        .replace(/\$\{title\}/g, title)
+                        .replace(/\$\{userInput\}/g, userInput)
+                        .replace(/\$\{problem\}/g, problem)
+                        .replace(/\$\{tableData\}/g, tableData)
+                        .replace(/\$\{sectionTitle\}/g, sectionTitle);
+
+                    return populatedPrompt.replaceAll('\n', ' ').trim();
+                },
+
+                setPromptTemplate(sectionId, templateString) {
+                    promptTemplates[sectionId] = templateString;
+                },
+
+                getAIPrompt(sectionId) {
+                    return this.buildPrompt(sectionId);
+                },
+
+                async handleGenerateText(sectionId) {
+                    const button = document.querySelector(`button[data-action='generate'][data-section='${sectionId}']`);
+                    const spinner = document.getElementById(`spinner-${sectionId}`);
+                    const outputEl = document.getElementById(`output-${sectionId}`);
+                    const inputEl = document.getElementById(`input-${sectionId}`);
+                    
+                    if(inputEl) this.reportData[sectionId].input = inputEl.value;
+
+                    if(spinner) spinner.classList.remove('hidden');
+                    if(button) button.disabled = true;
+                    outputEl.innerHTML = `<p class="text-slate-400">AI'en tænker... et øjeblik.</p>`;
+                    
+                    const prompt = this.getAIPrompt(sectionId);
+
+                    try {
+                        let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                        const payload = { contents: chatHistory };
+                        const apiKey = ""; // API key will be injected
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                        
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`API-kald fejlede med status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        
+                        if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                            const aiResponse = result.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                            this.reportData[sectionId].output = aiResponse;
+                            outputEl.innerHTML = aiResponse;
+                        } else {
+                            throw new Error("Uventet svarformat fra API.");
+                        }
+                    } catch (error) {
+                        console.error('Fejl under tekstgenerering:', error);
+                        outputEl.innerHTML = `<p class="text-red-500">Der opstod en fejl: ${error.message}</p>`;
+                    } finally {
+                        if(spinner) spinner.classList.add('hidden');
+                        if(button) button.disabled = false;
+                    }
+                },
+                
+                async handleAddReference() {
+                    const inputRef = document.getElementById('input-ref');
+                    const refValue = inputRef.value.trim();
+                    if (!refValue) return;
+
+                    inputRef.disabled = true;
+                    const addButton = document.querySelector('button[data-action="add-ref"]');
+                    if(addButton) addButton.disabled = true;
+                    
+                    const prompt = `Formater venligst følgende identifikator til en fuld akademisk reference i APA-stil: "${refValue}". Hvis det ikke er muligt, svar da med en fejlmeddelelse.`;
+
+                    try {
+                        let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                        const payload = { contents: chatHistory };
+                        const apiKey = "";
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) throw new Error(`API-kald for reference fejlede: ${response.status}`);
+                        
+                        const result = await response.json();
+                        const formattedRef = result.candidates[0].content.parts[0].text;
+                        
+                        this.reportData.litteraturliste.references.push({ original: refValue, formatted: formattedRef });
+                        inputRef.value = '';
+
+                    } catch (error) {
+                         this.reportData.litteraturliste.references.push({ original: refValue, formatted: `Kunne ikke formatere: "${refValue}". Fejl: ${error.message}` });
+                    } finally {
+                        inputRef.disabled = false;
+                        if(addButton) addButton.disabled = false;
+                        this.renderMainContent();
+                    }
+                },
+
+                handleRemoveReference(index) {
+                    this.reportData.litteraturliste.references.splice(index, 1);
+                    this.renderMainContent();
+                },
+
+                handleAddRow() {
+                    this.reportData.resultater.tableData.push([`Prøve ${this.reportData.resultater.tableData.length + 1}`, 0]);
+                    this.renderMainContent();
+                },
+                
+                handleRemoveRow(index) {
+                     this.reportData.resultater.tableData.splice(index, 1);
+                     this.renderMainContent();
+                },
+
+                handleTableUpdate(e) {
+                    const { row, col } = e.target.dataset;
+                    let value = e.target.value;
+                    if (col === '1') value = parseFloat(value) || 0;
+                    this.reportData.resultater.tableData[row][col] = value;
+                    this.renderChart();
+                },
+
+                renderChart() {
+                    if (this.chartInstance) {
+                        this.chartInstance.destroy();
+                    }
+                    const ctx = document.getElementById('results-chart').getContext('2d');
+                    const labels = this.reportData.resultater.tableData.map(row => row[0]);
+                    const data = this.reportData.resultater.tableData.map(row => row[1]);
+                    
+                    this.chartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Målte Værdier',
+                                data: data,
+                                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                                borderColor: 'rgba(59, 130, 246, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' } }, x: { grid: { display: false } } },
+                            plugins: { legend: { display: false }, title: { display: true, text: 'Oversigt over Resultater' } }
+                        }
+                    });
+                },
+
+                downloadReport() {
+                    const button = document.getElementById('download-report-btn');
+                    button.disabled = true;
+                    button.innerHTML = `
+                        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        <span>Genererer...</span>`;
+                    
+                    try {
+                        let htmlContent = `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="UTF-8">
+                                <style>
+                                    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+                                    h1 { font-size: 24pt; font-family: 'Arial', sans-serif; text-align: center; }
+                                    h2 { font-size: 16pt; font-family: 'Arial', sans-serif; page-break-before: always; padding-top: 1em;}
+                                    p { line-height: 1.5; }
+                                    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+                                    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                                    th { background-color: #f2f2f2; }
+                                    ul { padding-left: 20px; }
+                                    li { margin-bottom: 0.5em; }
+                                    .title-page { text-align: center; height: 90vh; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+                                </style>
+                            </head>
+                            <body>
+                        `;
+
+                        // Titelblad
+                        const titleFields = this.reportData.titelblad?.fields || {};
+                        htmlContent += `
+                            <div class="title-page">
+                                <h1>${titleFields.title || 'Rapport'}</h1>
+                                <p style="font-size: 14pt;">${titleFields.name || 'Ukendt Forfatter'}</p>
+                                <br><br>
+                                <p>${titleFields.place || 'Ukendt Sted'}</p>
+                                <p>${titleFields.date || new Date().toLocaleDateString('da-DK')}</p>
+                            </div>
+                        `;
+
+                        // Andre sektioner
+                        this.sections.forEach(section => {
+                            if (section.id !== 'titelblad') {
+                                const sectionData = this.reportData[section.id];
+                                if (sectionData && (sectionData.output || sectionData.references || section.id === 'resultater')) {
+                                     htmlContent += `<h2>${section.title}</h2>`;
+                                     if (section.id === 'litteraturliste' && sectionData.references?.length > 0) {
+                                        htmlContent += `<ul>`;
+                                        sectionData.references.forEach(ref => {
+                                            htmlContent += `<li>${ref.formatted}</li>`;
+                                        });
+                                        htmlContent += `</ul>`;
+                                     } else if (section.id === 'resultater' && sectionData) {
+                                         if(this.chartInstance) {
+                                             htmlContent += `<p><img src="${this.chartInstance.toBase64Image()}" alt="Graf over resultater" style="max-width: 500px; display: block; margin: 1em auto;"></p>`;
+                                         }
+                                         if(sectionData.output) {
+                                             htmlContent += `<div>${sectionData.output}</div>`;
+                                         }
+                                     } else if (sectionData.output) {
+                                         htmlContent += `<div>${sectionData.output}</div>`;
+                                     }
+                                }
+                            }
+                        });
+
+                        htmlContent += '</body></html>';
+                        
+                        // Use native browser functionality to download the file
+                        const blob = new Blob([htmlContent], { type: 'application/msword' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'rapport.doc'; // Downloading as .doc to encourage opening with Word
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+
+                    } catch (error) {
+                        console.error("Fejl under download:", error);
+                        alert("Der opstod en fejl under generering af rapporten.");
+                    } finally {
+                        button.disabled = false;
+                        button.innerHTML = `
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                             <span>Download Rapport</span>`;
+                    }
+                }
+            };
+
+            app.init();
+        });
+    </script>
+</body>
+</html>

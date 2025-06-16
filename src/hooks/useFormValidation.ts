@@ -479,29 +479,7 @@ export const useFormValidation = (
   // Validate on mount if needed
   useEffect(() => {
     if (options.validateOnMount || options.validateOnInit) {
-      // Inline validation to avoid circular dependency
-      const newErrors: FormErrors = {
-        title: validateField('title', formData.title, 'immediate'),
-        content: validateField('content', formData.content, 'immediate'),
-        references: {},
-      };
-      
-      // Validate each reference
-      formData.references.forEach((reference, index) => {
-        newErrors.references[index] = validateReference(reference);
-      });
-      
-      setErrors(newErrors);
-      
-      // Check form validity
-      const isTitleValid = newErrors.title.isValid;
-      const isContentValid = newErrors.content.isValid;
-      const areReferencesValid = Object.values(newErrors.references).every(referenceErrors => {
-        return Object.values(referenceErrors).every(error => error.isValid);
-      });
-      
-      setIsFormValid(isTitleValid && isContentValid && areReferencesValid);
-      calculateProgress();
+      validateForm();
     }
 
     // Set initialRender to false after first render
@@ -513,36 +491,14 @@ export const useFormValidation = (
         clearTimeout(validationTimers.current[key]);
       });
     };
-  }, [options.validateOnMount, options.validateOnInit, formData, validateField, calculateProgress]);
+  }, [options.validateOnMount, options.validateOnInit]); // Remove circular dependencies
 
   // Validate when form data changes if validateOnChange is true
   useEffect(() => {
     if (!initialRender.current && options.validateOnChange) {
-      // Use a local version of validateForm to avoid circular dependency
-      const newErrors: FormErrors = {
-        title: validateField('title', formData.title, 'immediate'),
-        content: validateField('content', formData.content, 'immediate'),
-        references: {},
-      };
-      
-      // Validate each reference
-      formData.references.forEach((reference, index) => {
-        newErrors.references[index] = validateReference(reference);
-      });
-      
-      setErrors(newErrors);
-      
-      // Check form validity
-      const isTitleValid = newErrors.title.isValid;
-      const isContentValid = newErrors.content.isValid;
-      const areReferencesValid = Object.values(newErrors.references).every(referenceErrors => {
-        return Object.values(referenceErrors).every(error => error.isValid);
-      });
-      
-      setIsFormValid(isTitleValid && isContentValid && areReferencesValid);
-      calculateProgress();
+      validateForm();
     }
-  }, [formData, options.validateOnChange, validateField, calculateProgress]);
+  }, [formData.title, formData.content, formData.references, options.validateOnChange]); // Use specific form data fields
 
   return {
     errors,
