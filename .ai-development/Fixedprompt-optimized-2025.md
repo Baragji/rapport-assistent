@@ -1,7 +1,7 @@
 # AI Assistant Fixed Prompt (2025 Optimized)
 
 ## INITIALIZATION
-Check: `/Users/Yousef_1/Dokumenter/Kodefiler/RapportAi/.ai-development/README.md`
+Check: `/.ai-development/README.md`
 - **EXISTS**: Announce "🔄 Development continuity detected. Initializing..." → Execute protocol autonomously
 - **NOT EXISTS**: Proceed with normal conversation
 
