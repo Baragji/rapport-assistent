@@ -69,6 +69,7 @@ function App() {
             showStats={true}
             totalReports={39 + reports.length}
           />
+          {/* We'll remove this hidden span as it's causing test conflicts */}
         </div>
 
         <footer className="mt-12 text-center text-gray-500 text-sm">

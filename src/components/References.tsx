@@ -91,7 +91,7 @@ const References: React.FC<ReferencesProps> = ({
 
   return (
     <div className="references-container">
-      <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-4 gap-2">
+      <div className="mobile-stack mb-4">
         <h3 className="text-subtitle-responsive text-gray-700">References</h3>
         <button
           type="button"
@@ -114,36 +114,39 @@ const References: React.FC<ReferencesProps> = ({
               className="reference-item p-3 xs:p-4 border border-gray-200 rounded-md bg-gray-50"
               data-testid={`reference-item-${index}`}
             >
-              <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-3 gap-2">
+              <div className="mobile-stack mb-3">
                 <span className="font-medium text-gray-700">Reference #{index + 1}</span>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 w-full xs:w-auto justify-center xs:justify-end">
                   <button
                     type="button"
-                    className="min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 border border-gray-200 rounded"
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 border border-gray-200 rounded"
                     onClick={() => handleMoveUp(index)}
                     disabled={index === 0 || disabled}
                     title="Move Up"
                     data-testid={`move-up-${index}`}
+                    aria-label="Move reference up"
                   >
                     ↑
                   </button>
                   <button
                     type="button"
-                    className="min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 border border-gray-200 rounded"
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 border border-gray-200 rounded"
                     onClick={() => handleMoveDown(index)}
                     disabled={index === references.length - 1 || disabled}
                     title="Move Down"
                     data-testid={`move-down-${index}`}
+                    aria-label="Move reference down"
                   >
                     ↓
                   </button>
                   <button
                     type="button"
-                    className="min-h-[36px] min-w-[36px] flex items-center justify-center text-red-500 hover:text-red-700 disabled:opacity-50 border border-gray-200 rounded"
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-500 hover:text-red-700 disabled:opacity-50 border border-gray-200 rounded"
                     onClick={() => handleRemoveReference(index)}
                     disabled={disabled}
                     title="Remove"
                     data-testid={`remove-reference-${index}`}
+                    aria-label="Remove reference"
                   >
                     ×
                   </button>
@@ -159,7 +162,7 @@ const References: React.FC<ReferencesProps> = ({
                     <input
                       id={`title-${index}`}
                       type="text"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 min-h-[44px] ${getValidationClass(index, 'title')}`}
+                      className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'title')}`}
                       value={reference.title}
                       onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'title')}
@@ -192,7 +195,7 @@ const References: React.FC<ReferencesProps> = ({
                     <input
                       id={`author-${index}`}
                       type="text"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 min-h-[44px] ${getValidationClass(index, 'author')}`}
+                      className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'author')}`}
                       value={reference.author}
                       onChange={(e) => handleFieldChange(index, 'author', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'author')}
@@ -225,7 +228,7 @@ const References: React.FC<ReferencesProps> = ({
                     <input
                       id={`year-${index}`}
                       type="text"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 min-h-[44px] ${getValidationClass(index, 'year')}`}
+                      className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'year')}`}
                       value={reference.year ?? ''}
                       onChange={(e) => handleFieldChange(index, 'year', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'year')}
@@ -257,7 +260,7 @@ const References: React.FC<ReferencesProps> = ({
                   <div className="relative">
                     <select
                       id={`type-${index}`}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 min-h-[44px] ${getValidationClass(index, 'type')}`}
+                      className={`touch-friendly-select input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'type')}`}
                       value={reference.type}
                       onChange={(e) => handleFieldChange(index, 'type', e.target.value as Reference['type'])}
                       onBlur={() => handleFieldBlur(index, 'type')}
@@ -296,7 +299,7 @@ const References: React.FC<ReferencesProps> = ({
                     <input
                       id={`publisher-${index}`}
                       type="text"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 min-h-[44px] ${getValidationClass(index, 'publisher')}`}
+                      className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'publisher')}`}
                       value={reference.publisher ?? ''}
                       onChange={(e) => handleFieldChange(index, 'publisher', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'publisher')}
@@ -328,7 +331,7 @@ const References: React.FC<ReferencesProps> = ({
                     <input
                       id={`url-${index}`}
                       type="url"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 min-h-[44px] ${getValidationClass(index, 'url')}`}
+                      className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'url')}`}
                       value={reference.url ?? ''}
                       onChange={(e) => handleFieldChange(index, 'url', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'url')}

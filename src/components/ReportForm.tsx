@@ -398,7 +398,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       
       {/* Custom field templates with AI assist buttons and validation */}
       <div className="form-group-responsive">
-        <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-2 gap-2">
+        <div className="mobile-stack mb-2">
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
             Report Title <span className="text-red-500">*</span>
           </label>
@@ -428,7 +428,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
             onChange={(e) => handleFieldChange('title', e.target.value)}
             onBlur={() => handleFieldBlur('title')}
             onFocus={() => handleFieldFocus('title')}
-            className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 min-h-[44px] px-3 py-2 ${getValidationClass('title')}`}
+            className={`input-responsive mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 ${getValidationClass('title')}`}
             aria-invalid={getValidationState('title') === 'invalid'}
             aria-describedby="title-error"
             data-testid="title-input"
@@ -481,11 +481,11 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       >
         {/* Content field with AI assist button and validation */}
         <div className="form-group-responsive mt-4">
-          <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-2 gap-2">
+          <div className="mobile-stack mb-2">
             <label htmlFor="content" className="block text-sm font-medium text-gray-700">
               Report Content <span className="text-red-500">*</span>
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="button-group-responsive">
               <AIAssistButton
                 templateId="improve-clarity"
                 templateParams={{
@@ -529,7 +529,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
               onBlur={() => handleFieldBlur('content')}
               onFocus={() => handleFieldFocus('content')}
               rows={8}
-              className={`mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 px-3 py-2 ${getValidationClass('content')}`}
+              className={`input-responsive mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 ${getValidationClass('content')}`}
               aria-invalid={getValidationState('content') === 'invalid'}
               aria-describedby="content-error"
               data-testid="content-input"
@@ -566,26 +566,30 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         
         {/* Form completion progress indicator */}
         <div className="mt-4 mb-4">
-          <div className="flex flex-col xs:flex-row justify-between text-sm text-gray-600 mb-1 gap-1">
-            <span>Form completion</span>
-            <span className={isFormValid ? 'text-green-600' : 'text-gray-600'}>
+          <div className="mobile-stack mb-1">
+            <span className="text-sm text-gray-600">Form completion</span>
+            <span className={`text-sm ${isFormValid ? 'text-green-600' : 'text-gray-600'}`}>
               {isFormValid ? 'Ready to submit' : `${validationProgress}% complete`}
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
             <div 
-              className={`h-2.5 rounded-full transition-all duration-300 ease-out ${
+              className={`h-3 rounded-full transition-all duration-300 ease-out ${
                 isFormValid ? 'bg-green-600' : 'bg-blue-600'
               }`}
               style={{ width: getProgressWidth() }}
+              role="progressbar"
+              aria-valuenow={validationProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
             ></div>
           </div>
         </div>
         
-        <div className="mt-4 flex justify-center xs:justify-end">
+        <div className="mt-6 flex justify-center xs:justify-end">
           <button
             type="submit"
-            className={`btn-touch rounded w-full xs:w-auto ${
+            className={`btn-touch rounded w-full xs:w-auto px-6 ${
               isFormValid 
                 ? 'bg-blue-600 text-white hover:bg-blue-700' 
                 : 'bg-gray-400 text-white cursor-not-allowed'

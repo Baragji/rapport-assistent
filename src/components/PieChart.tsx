@@ -192,7 +192,7 @@ const PieChart: React.FC<PieChartProps> = ({
 
   return (
     <div className="card-responsive" data-testid={testId}>
-      <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-4 gap-3">
+      <div className="mobile-stack mb-4">
         <h2 className="text-title-responsive text-gray-800">{title}</h2>
         
         {showChartTypeSelector && (
@@ -221,7 +221,7 @@ const PieChart: React.FC<PieChartProps> = ({
         )}
       </div>
       
-      <div className={`${height} xs:h-72 sm:h-80 md:h-96 transition-all duration-500 ease-in-out`}>
+      <div className={`${height} h-60 xs:h-72 sm:h-80 md:h-96 transition-all duration-500 ease-in-out overflow-hidden`}>
         {renderChart()}
       </div>
       
