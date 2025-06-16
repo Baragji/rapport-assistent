@@ -65,7 +65,7 @@ describe('PieChart Component', () => {
     render(<PieChart data={mockData} />);
     
     expect(screen.getByText('Chart')).toBeInTheDocument();
-    expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('pie-chart-pie')).toBeInTheDocument();
   });
 
   it('renders with custom title', () => {
@@ -79,14 +79,14 @@ describe('PieChart Component', () => {
     const customHeight = 'h-96';
     render(<PieChart data={mockData} height={customHeight} />);
     
-    const chartContainer = screen.getByTestId('pie-chart').parentElement;
+    const chartContainer = screen.getByTestId('pie-chart-pie').parentElement;
     expect(chartContainer).toHaveClass(customHeight);
   });
 
   it('passes correct data to Pie component', () => {
     render(<PieChart data={mockData} />);
     
-    const pieChart = screen.getByTestId('pie-chart');
+    const pieChart = screen.getByTestId('pie-chart-pie');
     const chartData = JSON.parse(pieChart.getAttribute('data-chart-data') ?? '{}');
     
     expect(chartData.labels).toEqual(mockData.labels);
@@ -210,20 +210,20 @@ describe('PieChart Component', () => {
   });
 
   it('applies correct CSS classes for styling', () => {
-    render(<PieChart data={mockData} />);
+    render(<PieChart data={mockData} testId="pie-chart" />);
     
-    const container = screen.getByTestId('pie-chart').closest('.bg-white');
-    expect(container).toHaveClass('bg-white', 'p-6', 'rounded-lg', 'shadow-md');
+    const container = screen.getByTestId('pie-chart-pie').closest('.card-responsive');
+    expect(container).toHaveClass('card-responsive');
     
     const title = screen.getByText('Chart');
-    expect(title).toHaveClass('text-2xl', 'font-semibold', 'text-gray-800');
+    expect(title).toHaveClass('text-title-responsive', 'text-gray-800');
   });
 
   it('applies correct CSS classes for statistics section', () => {
-    render(<PieChart data={mockData} showStats={true} />);
+    render(<PieChart data={mockData} showStats={true} testId="pie-chart" />);
     
     const statsSection = screen.getByText('Report Statistics').closest('.bg-gray-50');
-    expect(statsSection).toHaveClass('mt-6', 'p-4', 'bg-gray-50', 'rounded-md');
+    expect(statsSection).toHaveClass('bg-gray-50', 'rounded-md');
   });
 
   // New tests for enhanced chart features
@@ -249,14 +249,14 @@ describe('PieChart Component', () => {
     render(<PieChart data={mockData} />);
     
     // Initially shows pie chart
-    expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('pie-chart-pie')).toBeInTheDocument();
     
     // Click bar chart button
     fireEvent.click(screen.getByTitle('Switch to bar chart'));
     
     // Now shows bar chart
-    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
-    expect(screen.queryByTestId('pie-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pie-chart-bar')).toBeInTheDocument();
+    expect(screen.queryByTestId('pie-chart-pie')).not.toBeInTheDocument();
   });
   
   it('switches to line chart when line button is clicked', () => {
@@ -266,7 +266,7 @@ describe('PieChart Component', () => {
     fireEvent.click(screen.getByTitle('Switch to line chart'));
     
     // Now shows line chart
-    expect(screen.getByTestId('line-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('pie-chart-line')).toBeInTheDocument();
   });
   
   it('switches to doughnut chart when doughnut button is clicked', () => {
@@ -276,15 +276,15 @@ describe('PieChart Component', () => {
     fireEvent.click(screen.getByTitle('Switch to doughnut chart'));
     
     // Now shows doughnut chart
-    expect(screen.getByTestId('doughnut-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('pie-chart-doughnut')).toBeInTheDocument();
   });
   
   it('uses initialChartType prop to set initial chart type', () => {
     render(<PieChart data={mockData} initialChartType="bar" />);
     
     // Initially shows bar chart
-    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
-    expect(screen.queryByTestId('pie-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pie-chart-bar')).toBeInTheDocument();
+    expect(screen.queryByTestId('pie-chart-pie')).not.toBeInTheDocument();
   });
   
   it('applies active styling to the current chart type button', () => {
@@ -312,7 +312,7 @@ describe('PieChart Component', () => {
     render(<PieChart data={mockData} onChartClick={mockClickHandler} />);
     
     // Get the chart options from the rendered component
-    const pieChart = screen.getByTestId('pie-chart');
+    const pieChart = screen.getByTestId('pie-chart-pie');
     const options = JSON.parse(pieChart.getAttribute('data-chart-options') ?? '{}');
     
     // Verify that options are passed correctly
@@ -350,7 +350,7 @@ describe('PieChart Component', () => {
   it('enhances data with hover effects for pie/doughnut charts', () => {
     render(<PieChart data={mockData} />);
     
-    const pieChart = screen.getByTestId('pie-chart');
+    const pieChart = screen.getByTestId('pie-chart-pie');
     const chartData = JSON.parse(pieChart.getAttribute('data-chart-data') ?? '{}');
     
     // Check for hover effects
@@ -360,7 +360,7 @@ describe('PieChart Component', () => {
   it('enhances data with tension for line charts', () => {
     render(<PieChart data={mockData} initialChartType="line" />);
     
-    const lineChart = screen.getByTestId('line-chart');
+    const lineChart = screen.getByTestId('pie-chart-line');
     const chartData = JSON.parse(lineChart.getAttribute('data-chart-data') ?? '{}');
     
     // Check for line chart specific properties
@@ -371,7 +371,7 @@ describe('PieChart Component', () => {
   it('configures proper scales for bar/line charts', () => {
     render(<PieChart data={mockData} initialChartType="bar" />);
     
-    const barChart = screen.getByTestId('bar-chart');
+    const barChart = screen.getByTestId('pie-chart-bar');
     const chartOptions = JSON.parse(barChart.getAttribute('data-chart-options') ?? '{}');
     
     // Check for scales configuration
@@ -383,7 +383,7 @@ describe('PieChart Component', () => {
   it('does not configure scales for pie/doughnut charts', () => {
     render(<PieChart data={mockData} initialChartType="pie" />);
     
-    const pieChart = screen.getByTestId('pie-chart');
+    const pieChart = screen.getByTestId('pie-chart-pie');
     const chartOptions = JSON.parse(pieChart.getAttribute('data-chart-options') ?? '{}');
     
     // Pie charts should not have scales

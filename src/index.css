@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,4 +14,116 @@
 
 body {
   min-height: 100vh;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Responsive utility classes */
+/* Touch-friendly button */
+.btn-touch {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive container with padding */
+.container-responsive {
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 480px) {
+  .container-responsive {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 768px) {
+  .container-responsive {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Responsive card */
+.card-responsive {
+  background-color: white;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+@media (min-width: 320px) {
+  .card-responsive {
+    padding: 1rem;
+  }
+}
+@media (min-width: 480px) {
+  .card-responsive {
+    padding: 1.5rem;
+  }
+}
+
+/* Responsive form group */
+.form-group-responsive {
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+/* Responsive grid - 1 column on mobile, 2 on tablet+ */
+.grid-responsive {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 480px) {
+  .grid-responsive {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Responsive text sizes */
+.text-title-responsive {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+@media (min-width: 320px) {
+  .text-title-responsive {
+    font-size: 1.5rem;
+  }
+}
+
+.text-subtitle-responsive {
+  font-size: 1rem;
+  font-weight: 500;
+}
+@media (min-width: 320px) {
+  .text-subtitle-responsive {
+    font-size: 1.125rem;
+  }
+}
+
+/* Collapsible section for mobile */
+.collapsible-section {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1rem;
+}
+
+/* Responsive spacing */
+.spacing-responsive {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+@media (min-width: 320px) {
+  .spacing-responsive {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+}
+@media (min-width: 480px) {
+  .spacing-responsive {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
 }
