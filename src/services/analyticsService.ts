@@ -468,8 +468,9 @@ export const initAnalyticsSession = (): void => {
  */
 export const startAIOperationTiming = (
   // We need to accept operationId for API compatibility but don't use it internally
-  // @ts-expect-error - Parameter is required by API but not used
-  operationId: string
+  // Parameter is required by API but not used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _operationId: string
 ): {
   stopTiming: (result: {
     featureId: string;

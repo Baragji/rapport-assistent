@@ -491,14 +491,16 @@ export const useFormValidation = (
         clearTimeout(validationTimers.current[key]);
       });
     };
-  }, [options.validateOnMount, options.validateOnInit]); // Remove circular dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.validateOnMount, options.validateOnInit]); // Remove circular dependencies - validateForm would cause infinite loop
 
   // Validate when form data changes if validateOnChange is true
   useEffect(() => {
     if (!initialRender.current && options.validateOnChange) {
       validateForm();
     }
-  }, [formData.title, formData.content, formData.references, options.validateOnChange]); // Use specific form data fields
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.title, formData.content, formData.references, options.validateOnChange]); // validateForm would cause infinite loop
 
   return {
     errors,

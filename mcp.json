@@ -1,0 +1,145 @@
+{
+    "mcpServers": {
+        "sequential-thinking": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking@0.6.2"
+            ],
+            "fromGalleryId": "modelcontextprotocol.servers_sequentialthinking"
+        },
+        "Multi Fetch": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@lmcc-dev/mult-fetch-mcp-server"
+            ],
+            "env": {
+                "MCP_LANG": "Auto-detected based on system"
+            },
+            "fromGalleryId": "lmcc-dev.mult-fetch-mcp-server"
+        },
+        "Firecrawl": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "firecrawl-mcp"
+            ],
+            "env": {
+                "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}",
+                "FIRECRAWL_RETRY_MAX_ATTEMPTS": "3",
+                "FIRECRAWL_RETRY_INITIAL_DELAY": "1000",
+                "FIRECRAWL_RETRY_MAX_DELAY": "10000",
+                "FIRECRAWL_RETRY_BACKOFF_FACTOR": "2",
+                "FIRECRAWL_CREDIT_WARNING_THRESHOLD": "1000",
+                "FIRECRAWL_CREDIT_CRITICAL_THRESHOLD": "100",
+                "MCP_ENABLED": "false"
+            },
+            "fromGalleryId": "mendableai.firecrawl-mcp-server"
+        },
+        "Gitingest": {
+            "command": "uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/puravparab/gitingest-mcp",
+                "gitingest-mcp"
+            ],
+            "env": {},
+            "fromGalleryId": "puravparab.Gitingest-MCP"
+        },
+        "desktop-commander": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@wonderwhy-er/desktop-commander"
+            ],
+            "fromGalleryId": "wonderwhy-er.ClaudeComputerCommander"
+        },
+        "TaskManager": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@kazuph/mcp-taskmanager"
+            ],
+            "env": {
+                "TASK_MANAGER_FILE_PATH": "/Users/Yousef_1/Documents/tasks.json"
+            },
+            "fromGalleryId": "kazuph.mcp-taskmanager"
+        },
+        "github-mcp": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-github"
+            ],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
+                "MCP_ENABLED": "false"
+            }
+        },
+        "Docker": {
+            "command": "uvx",
+            "args": [
+                "docker-mcp"
+            ],
+            "env": {},
+            "fromGalleryId": "QuantGeekDev.docker-mcp"
+        },
+        "DeepView": {
+            "command": "uvx",
+            "args": [
+                "deepview-mcp"
+            ],
+            "env": {
+                "GEMINI_API_KEY": "${GOOGLE_API_KEY}"
+            },
+            "fromGalleryId": "ai-1st.deepview-mcp"
+        },
+        "rag-proxy-local": {
+            "command": "/Users/Yousef_1/Dokumenter/Kodefiler/Ejaztemplate/LearningLab/AgenticRag/gcp-migration/venv/bin/python",
+            "args": [
+                "/Users/Yousef_1/Dokumenter/Kodefiler/Ejaztemplate/LearningLab/AgenticRag/gcp-migration/src/api/mcp_server_stdio_direct.py"
+            ],
+            "env": {
+                "RAG_SERVER_URL": "http://localhost:8080",
+                "PYTHONPATH": "/Users/Yousef_1/Dokumenter/Kodefiler/Ejaztemplate/LearningLab/AgenticRag/gcp-migration"
+            }
+        },
+        "filesystem": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "/Users/Yousef_1/Dokumenter/Kodefiler/RapportAi/rapport-assistent"
+            ],
+            "fromGalleryId": "modelcontextprotocol.server-filesystem"
+        },
+        "mcp-neo4j-memory-server": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "github:JovanHsu/mcp-neo4j-memory-server"
+            ],
+            "env": {
+                "NEO4J_URI": "bolt://localhost:7687",
+                "NEO4J_USERNAME": "neo4j",
+                "NEO4J_PASSWORD": "memorypassword",
+                "NEO4J_DATABASE": "neo4j"
+            },
+            "fromGalleryId": "jovanhsu.mcp-neo4j-memory-server"
+        },
+        "memento-mcp": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@gannonh/memento-mcp"
+            ],
+            "env": {
+                "NEO4J_URI": "bolt://localhost:7687",
+                "NEO4J_USERNAME": "neo4j",
+                "NEO4J_PASSWORD": "memorypassword"
+            },
+            "fromGalleryId": "gannonh.memento-mcp"
+        }
+    }
+}

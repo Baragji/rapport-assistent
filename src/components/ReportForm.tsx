@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Form from '@rjsf/core';
+import type { RJSFValidationError, ErrorTransformer } from '@rjsf/utils';
 import type { JSONSchema7 } from 'json-schema';
 import validator from '@rjsf/validator-ajv8';
 import { convertMarkdownToDocx, generateMarkdownReport } from '../utils/documentUtils';
@@ -8,7 +9,7 @@ import References from './References';
 import AIAssistButton from './AIAssistButton';
 import AnimatedButton from './AnimatedButton';
 import LoadingSpinner from './LoadingSpinner';
-import useFormValidation, { type FieldValidationRules, type FormData as ValidationFormData } from '../hooks/useFormValidation';
+import useFormValidation, { type FieldValidationRules } from '../hooks/useFormValidation';
 
 // Define the JSON schema for the form
 const schema: JSONSchema7 = {
@@ -79,7 +80,7 @@ const schema: JSONSchema7 = {
 };
 
 // Define UI schema for better form layout
-const uiSchema = {
+const uiSchema: any = {
   title: {
     'ui:options': {
       label: false, // We'll create a custom label with the AI assist button
@@ -120,6 +121,7 @@ interface ReportFormData {
   content: string;
   category: string;
   references: Reference[];
+  [key: string]: unknown;
 }
 
 // Define props for the ReportForm component
@@ -142,6 +144,20 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [characterCount, setCharacterCount] = useState({ title: 0, content: 0 });
+  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
+  const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
+
+  // Define categories based on schema, plus some common ones
+  const allCategories = [
+    ...(schema.properties?.category && Array.isArray((schema.properties.category as JSONSchema7).enum) ? (schema.properties.category as JSONSchema7).enum as string[] : []),
+    'Teknisk Rapport',
+    'Forskningsrapport',
+    'Projektrapport',
+    'Feasibility Study',
+    'Årsrapport',
+    'Markedsanalyse',
+    'Statusrapport'
+  ].filter((value, index, self) => self.indexOf(value) === index); // Ensure unique values
 
   // Use our enhanced validation hook
   const {
@@ -157,7 +173,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
     validateForm,
     validateField,
   } = useFormValidation(
-    formData as ValidationFormData,
+    formData, // Type inference should work better with ReportFormData generic below
     {
       validateOnChange: true,
       validateOnBlur: true,
@@ -181,8 +197,8 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
     return `${validationProgress}%`;
   };
 
-  const handleSubmit = async (e: { formData?: ReportFormData }) => {
-    if (!e.formData) return;
+  const handleSubmit = async ({ formData: submittedData }: { formData: ReportFormData }) => {
+    if (!submittedData) return;
 
     // Validate the form before submission
     if (!validateForm()) {
@@ -193,13 +209,15 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       return;
     }
 
-    const submittedData = e.formData;
+
     setIsSubmitting(true);
     setMessage(null);
 
     try {
       // Update local state
-      setFormData(submittedData);
+      // setFormData(submittedData); // Already part of RJSF's formData handling, direct update here might be redundant or cause issues if RJSF manages its own state before submit.
+                                    // The formData state used by useFormValidation is updated via handleChange, and RJSF form will submit its current internal state.
+                                    // For clarity, let's assume submittedData is the source of truth from the form.
 
       // Generate markdown report with a slight delay to show loading state
       const markdown = await new Promise<string>(resolve => {
@@ -240,6 +258,16 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         setIsSubmitting(false);
       }, 300);
     }
+  };
+
+  const transformErrors: ErrorTransformer = (errors: RJSFValidationError[]) => {
+    return errors.map(error => {
+      if (error.name === 'required' && error.property === '.title') {
+        error.message = 'Report Title is absolutely required!';
+      }
+      // You can add more custom error transformations here
+      return error;
+    });
   };
 
   // Handle references changes separately from the form
@@ -319,34 +347,58 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   };
 
   // Handle field change with validation
-  const handleFieldChange = (field: string, value: string) => {
+  const handleFieldChange = (field: keyof ReportFormData, value: string) => {
     setFormData({
       ...formData,
       [field]: value,
     });
-    handleChange(field, value);
+    handleChange(String(field), value);
 
     // Clear any messages when user starts typing
-    if (message && dirty[field as keyof typeof dirty]) {
+    if (message && dirty[field]) {
       setMessage(null);
     }
   };
 
   // Handle field blur with validation
-  const handleFieldBlur = (field: string) => {
-    handleBlur(field, undefined, undefined);
+  const handleFieldBlur = (field: keyof ReportFormData) => {
+    handleBlur(String(field), undefined, undefined);
+  };
+
+  // Handle category change with suggestions
+  const handleCategoryInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    handleChange(name, value); // From useFormValidation
+
+    if (value.length > 0) {
+      const filteredSuggestions = allCategories.filter(cat =>
+        cat.toLowerCase().includes(value.toLowerCase())
+      );
+      setCategorySuggestions(filteredSuggestions);
+      setShowCategorySuggestions(true);
+    } else {
+      setCategorySuggestions(allCategories); // Show all if input is empty
+      setShowCategorySuggestions(formData.category ? true : false); // Hide if input is truly empty and not just cleared
+    }
+  };
+
+  const handleCategorySuggestionClick = (suggestion: string) => {
+    setFormData(prev => ({ ...prev, category: suggestion }));
+    handleChange('category', suggestion); // From useFormValidation
+    setShowCategorySuggestions(false);
   };
 
   // Handle field focus
-  const handleFieldFocus = (field: string) => {
-    handleFocus(field);
+  const handleFieldFocus = (field: keyof ReportFormData) => {
+    handleFocus(String(field));
   };
 
   // Get validation state for a field
-  const getValidationState = (field: string) => {
-    if (!touched[field as keyof typeof touched]) return null;
+  const getValidationState = (field: keyof ReportFormData): 'valid' | 'invalid' | 'warning' | null => {
+    if (!touched[field]) return null;
 
-    const error = errors[field as keyof typeof errors];
+    const error = errors[field];
     // Check if it's a simple ValidationResult or a nested object for references
     if ('isValid' in error) {
       // Check severity first, even if isValid is false
@@ -360,7 +412,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   };
 
   // Get validation class for a field
-  const getValidationClass = (field: string) => {
+  const getValidationClass = (field: keyof ReportFormData) => {
     const state = getValidationState(field);
     if (state === 'valid') return 'border-green-500 focus:ring-green-500';
     if (state === 'warning') return 'border-yellow-500 focus:ring-yellow-500';
@@ -373,7 +425,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   };
 
   // Get validation icon for a field
-  const getValidationIcon = (field: string) => {
+  const getValidationIcon = (field: keyof ReportFormData) => {
     const state = getValidationState(field);
 
     if (state === 'valid') {
@@ -416,7 +468,7 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
   };
 
   // Get validation message color class
-  const getValidationMessageClass = (field: string) => {
+  const getValidationMessageClass = (field: keyof ReportFormData) => {
     const state = getValidationState(field);
     if (state === 'valid') return 'text-green-600';
     if (state === 'warning') return 'text-yellow-600';
@@ -509,6 +561,69 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
       )}
 
       {/* Custom field templates with AI assist buttons and validation */}
+
+      {/* Category Field with Suggestions - Placed before RJSF Form */}
+      <div className="form-group-responsive">
+        <label htmlFor="category-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Category <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            name="category"
+            id="category-input" // Unique ID for this input
+            value={formData.category} // Bind to formData.category
+            onChange={handleCategoryInputChange}
+            onFocus={() => {
+              handleFieldFocus('category'); // For useFormValidation
+              if (formData.category.length > 0) {
+                const filtered = allCategories.filter(cat => cat.toLowerCase().includes(formData.category.toLowerCase()));
+                setCategorySuggestions(filtered.length > 0 ? filtered : allCategories);
+              } else {
+                setCategorySuggestions(allCategories);
+              }
+              setShowCategorySuggestions(true);
+            }}
+            onBlur={() => {
+              handleFieldBlur('category'); // For useFormValidation
+              setTimeout(() => setShowCategorySuggestions(false), 150); // Delay to allow click on suggestion
+            }}
+            className={`input-responsive mt-1 block w-full rounded-md shadow-sm focus:outline-none focus:ring-2 ${getValidationClass('category')} transition-opacity-300`}
+            aria-invalid={getValidationState('category') === 'invalid'}
+            aria-describedby="category-error-message"
+            data-testid="category-input-manual"
+            placeholder="E.g., Technical, Research"
+            autoComplete="off"
+          />
+          {getValidationState('category') && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              {getValidationIcon('category')}
+            </div>
+          )}
+          {showCategorySuggestions && categorySuggestions.length > 0 && (
+            <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-gray-800 dark:ring-gray-700 sm:text-sm">
+              {categorySuggestions.map((suggestion, index) => (
+                <li
+                  key={index}
+                  className="cursor-pointer select-none p-2 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500"
+                  onMouseDown={() => handleCategorySuggestionClick(suggestion)}
+                >
+                  {suggestion}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {touched.category && errors.category && (errors.category as any).message && (
+          <p
+            className={`mt-1 text-sm ${getValidationMessageClass('category')}`}
+            id="category-error-message"
+          >
+            {(errors.category as any).message}
+          </p>
+        )}
+      </div>
+
       <div className="form-group-responsive">
         <div className="mobile-stack mb-2">
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
@@ -594,13 +709,14 @@ const ReportForm = ({ onSubmit }: ReportFormProps) => {
         )}
       </div>
 
-      <Form<ReportFormData>
-        schema={schema}
-        uiSchema={uiSchema}
-        formData={formData}
-        onSubmit={handleSubmit}
+      <Form
+        schema={schema as any}
+        uiSchema={uiSchema as any}
+        formData={formData as any}
+        onSubmit={handleSubmit as any}
         disabled={isSubmitting || isGeneratingTitle || isGeneratingContent}
-        validator={validator}
+        validator={validator as any}
+        transformErrors={transformErrors as any}
       >
         {/* Content field with AI assist button and validation */}
         <div className="form-group-responsive mt-4">

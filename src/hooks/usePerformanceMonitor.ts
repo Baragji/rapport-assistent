@@ -127,7 +127,7 @@ export function usePerformanceMonitor(
         lcpObserver.disconnect();
         clsObserver.disconnect();
         fidObserver.disconnect();
-      } catch (error) {
+      } catch {
         // Ignore errors on cleanup
       }
     };
@@ -187,7 +187,7 @@ export function usePerformanceMonitor(
     return () => {
       try {
         requestObserver.disconnect();
-      } catch (error) {
+      } catch {
         // Ignore errors on cleanup
       }
     };

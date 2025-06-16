@@ -16,14 +16,14 @@ interface DebounceOptions {
  * @param wait The time to wait in milliseconds
  * @param options Options for the debounce behavior
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait = 100,
   options: DebounceOptions = {}
 ): (...args: Parameters<T>) => ReturnType<T> | undefined {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let lastArgs: Parameters<T> | undefined;
-  let lastThis: any;
+  let lastThis: unknown;
   let result: ReturnType<T>;
   let lastCallTime: number | undefined;
   let lastInvokeTime = 0;
@@ -36,7 +36,7 @@ export function debounce<T extends (...args: any[]) => any>(
 
     lastArgs = lastThis = undefined;
     lastInvokeTime = time;
-    result = func.apply(thisArg, args as Parameters<T>);
+    result = func.apply(thisArg, args as Parameters<T>) as ReturnType<T>;
     return result;
   }
 
@@ -111,12 +111,14 @@ export function debounce<T extends (...args: any[]) => any>(
     return timeout !== undefined;
   }
 
-  function debounced(this: any, ...args: Parameters<T>): ReturnType<T> | undefined {
+  function debounced(this: unknown, ...args: Parameters<T>): ReturnType<T> | undefined {
     const time = Date.now();
     const isInvoking = shouldInvoke(time);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const thisArg = this;
 
     lastArgs = args;
-    lastThis = this;
+    lastThis = thisArg;
     lastCallTime = time;
 
     if (isInvoking) {
@@ -147,7 +149,7 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param wait The time to wait in milliseconds
  * @param options Options for the throttle behavior
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait = 100,
   options: { leading?: boolean; trailing?: boolean } = {}
@@ -164,11 +166,11 @@ export function throttle<T extends (...args: any[]) => any>(
  * @param func The function to memoize
  * @param resolver Optional function to resolve the cache key
  */
-export function memoize<T extends (...args: any[]) => any>(
+export function memoize<T extends (...args: unknown[]) => unknown>(
   func: T,
   resolver?: (...args: Parameters<T>) => string
 ): (...args: Parameters<T>) => ReturnType<T> {
-  const memoized = function (this: any, ...args: Parameters<T>): ReturnType<T> {
+  const memoized = function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
     const key = resolver ? resolver.apply(this, args) : String(args[0]);
     const cache = memoized.cache;
 
@@ -176,7 +178,7 @@ export function memoize<T extends (...args: any[]) => any>(
       return cache.get(key) as ReturnType<T>;
     }
 
-    const result = func.apply(this, args);
+    const result = func.apply(this, args) as ReturnType<T>;
     memoized.cache = cache.set(key, result);
     return result;
   };
@@ -190,13 +192,13 @@ export function memoize<T extends (...args: any[]) => any>(
  * @param func The function to measure
  * @param name Optional name for the measurement
  */
-export function measureExecutionTime<T extends (...args: any[]) => any>(
+export function measureExecutionTime<T extends (...args: unknown[]) => unknown>(
   func: T,
   name = 'function'
 ): (...args: Parameters<T>) => ReturnType<T> {
-  return function (this: any, ...args: Parameters<T>): ReturnType<T> {
+  return function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
     performanceMonitor.startMetric(name);
-    const result = func.apply(this, args);
+    const result = func.apply(this, args) as ReturnType<T>;
     performanceMonitor.endMetric(name);
     return result;
   };

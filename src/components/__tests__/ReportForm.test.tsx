@@ -66,7 +66,15 @@ vi.mock('../AIAssistButton', () => ({
 
 // Use hidden elements to expose component state for testing without affecting the UI
 vi.mock('../References', () => ({
-  default: ({ references, onChange, disabled, errors, touched, onBlur }) => (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  default: ({ references, onChange, disabled, errors, touched, onBlur: _onBlur }: {
+    references: any;
+    onChange: any;
+    disabled: any;
+    errors: any;
+    touched: any;
+    onBlur: any;
+  }) => (
     <div data-testid="mock-references">
       <div data-testid="references-data" style={{ display: 'none' }}>
         {JSON.stringify(references)}
