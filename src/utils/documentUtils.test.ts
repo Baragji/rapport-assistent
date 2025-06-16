@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { 
-  isValidMarkdown, 
-  generateMarkdownReport, 
+import {
+  isValidMarkdown,
+  generateMarkdownReport,
   convertMarkdownToDocx,
   formatReference,
-  type Reference
+  type Reference,
 } from './documentUtils';
 
 // Mock the md-to-docx module
@@ -68,49 +68,51 @@ describe('Document Utilities', () => {
         year: '1968',
         publisher: 'Addison-Wesley',
         url: 'https://example.com/knuth',
-        type: 'Book'
+        type: 'Book',
       };
-      
+
       const result = formatReference(reference);
-      
-      expect(result).toBe('Knuth, D. (1968). *The Art of Computer Programming*. Addison-Wesley. Retrieved from [https://example.com/knuth](https://example.com/knuth)');
+
+      expect(result).toBe(
+        'Knuth, D. (1968). *The Art of Computer Programming*. Addison-Wesley. Retrieved from [https://example.com/knuth](https://example.com/knuth)'
+      );
     });
-    
+
     it('should format a reference without optional fields', () => {
       const reference: Reference = {
         title: 'Introduction to Algorithms',
         author: 'Cormen, T.',
-        type: 'Book'
+        type: 'Book',
       };
-      
+
       const result = formatReference(reference);
-      
+
       expect(result).toBe('Cormen, T.. *Introduction to Algorithms*');
     });
-    
+
     it('should format a reference with year but no publisher or URL', () => {
       const reference: Reference = {
         title: 'Clean Code',
         author: 'Martin, R.',
         year: '2008',
-        type: 'Book'
+        type: 'Book',
       };
-      
+
       const result = formatReference(reference);
-      
+
       expect(result).toBe('Martin, R. (2008). *Clean Code*');
     });
-    
+
     it('should format a reference with publisher but no year or URL', () => {
       const reference: Reference = {
         title: 'Design Patterns',
         author: 'Gamma, E. et al.',
         publisher: 'Addison-Wesley',
-        type: 'Book'
+        type: 'Book',
       };
-      
+
       const result = formatReference(reference);
-      
+
       expect(result).toBe('Gamma, E. et al.. *Design Patterns*. Addison-Wesley');
     });
   });
@@ -130,9 +132,9 @@ describe('Document Utilities', () => {
       const title = 'Test Report';
       const content = 'This is the content of the test report.';
       const category = 'Technical';
-      
+
       const result = generateMarkdownReport(title, content, category);
-      
+
       expect(result).toContain('# Test Report');
       expect(result).toContain('## Category: Technical');
       expect(result).toContain('**Date:** 6/15/2025');
@@ -143,12 +145,12 @@ describe('Document Utilities', () => {
 
     it('should handle empty inputs', () => {
       const result = generateMarkdownReport('', '', '');
-      
+
       expect(result).toContain('# ');
       expect(result).toContain('## Category: ');
       expect(result).toContain('## Content');
     });
-    
+
     it('should include references section when references are provided', () => {
       const title = 'Test Report with References';
       const content = 'This is the content.';
@@ -158,28 +160,28 @@ describe('Document Utilities', () => {
           title: 'First Reference',
           author: 'Author One',
           year: '2020',
-          type: 'Article'
+          type: 'Article',
         },
         {
           title: 'Second Reference',
           author: 'Author Two',
           year: '2021',
           publisher: 'Publisher Name',
-          type: 'Book'
-        }
+          type: 'Book',
+        },
       ];
-      
+
       const result = generateMarkdownReport(title, content, category, references);
-      
+
       expect(result).toContain('# Test Report with References');
       expect(result).toContain('## References');
       expect(result).toContain('1. Author One (2020)');
       expect(result).toContain('2. Author Two (2021)');
     });
-    
+
     it('should not include references section when no references are provided', () => {
       const result = generateMarkdownReport('Title', 'Content', 'Category', []);
-      
+
       expect(result).not.toContain('## References');
     });
   });
@@ -223,7 +225,7 @@ describe('Document Utilities', () => {
       });
 
       // Mock setTimeout to execute immediately
-      vi.spyOn(global, 'setTimeout').mockImplementation((fn) => {
+      vi.spyOn(global, 'setTimeout').mockImplementation(fn => {
         if (typeof fn === 'function') fn();
         return 0 as unknown as NodeJS.Timeout;
       });
@@ -231,11 +233,14 @@ describe('Document Utilities', () => {
       // Mock md-to-docx
       const { toDocx } = await import('md-to-docx');
       const mockDocxContent = new Uint8Array([
-        0x50, 0x4B, 0x03, 0x04, // ZIP file signature
-        ...Array(1000).fill(0x00) // Mock DOCX content
+        0x50,
+        0x4b,
+        0x03,
+        0x04, // ZIP file signature
+        ...Array(1000).fill(0x00), // Mock DOCX content
       ]);
-      const mockBlob = new Blob([mockDocxContent], { 
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      const mockBlob = new Blob([mockDocxContent], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
       vi.mocked(toDocx).mockResolvedValue(mockBlob);
 
@@ -249,10 +254,10 @@ describe('Document Utilities', () => {
             {
               type: 'heading',
               depth: 1,
-              children: [{ type: 'text', value: 'Test' }]
-            }
-          ]
-        })
+              children: [{ type: 'text', value: 'Test' }],
+            },
+          ],
+        }),
       } as unknown as ReturnType<typeof unified>);
     });
 
@@ -268,7 +273,9 @@ describe('Document Utilities', () => {
 
       // Verify the result is a Blob
       expect(result).toBeInstanceOf(Blob);
-      expect(result.type).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(result.type).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
 
       // Verify DOM manipulation for download
       expect(mockCreateElement).toHaveBeenCalledWith('a');
@@ -281,7 +288,7 @@ describe('Document Utilities', () => {
 
     it('should use default filename when none provided', async () => {
       const markdown = '# Default Report';
-      
+
       const result = await convertMarkdownToDocx(markdown);
 
       expect(result).toBeInstanceOf(Blob);
@@ -321,17 +328,21 @@ Visit [Google](https://www.google.com) for more information.
       const result = await convertMarkdownToDocx(complexMarkdown, 'complex-report');
 
       expect(result).toBeInstanceOf(Blob);
-      expect(result.type).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(result.type).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
       expect(result.size).toBeGreaterThan(0);
     });
 
     it('should handle empty markdown content', async () => {
       const emptyMarkdown = '';
-      
+
       const result = await convertMarkdownToDocx(emptyMarkdown, 'empty-report');
 
       expect(result).toBeInstanceOf(Blob);
-      expect(result.type).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(result.type).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
     });
 
     it('should handle markdown with special characters', async () => {
@@ -358,7 +369,9 @@ Visit [Google](https://www.google.com) for more information.
     });
 
     it('should handle very long markdown content', async () => {
-      const longContent = Array(100).fill('This is a long paragraph with lots of content. ').join('');
+      const longContent = Array(100)
+        .fill('This is a long paragraph with lots of content. ')
+        .join('');
       const longMarkdown = `
 # Long Report
 
@@ -443,7 +456,9 @@ Content with **bold** and _italic_ text.
       const result = await convertMarkdownToDocx(markdown, fileName);
 
       expect(result).toBeInstanceOf(Blob);
-      expect(result.type).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(result.type).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
     });
   });
 });

@@ -1,6 +1,6 @@
 /**
  * Analytics service for tracking AI feature usage and user interactions
- * 
+ *
  * This service provides privacy-focused analytics for tracking how AI features
  * are used within the application, without collecting personal data.
  */
@@ -13,42 +13,42 @@ export interface AIUsageData {
    * Identifier for the AI feature being used
    */
   featureId: string;
-  
+
   /**
    * Template ID used for generation (if applicable)
    */
   templateId?: string;
-  
+
   /**
    * Response time in milliseconds
    */
   responseTime?: number;
-  
+
   /**
    * Number of tokens in the response (if available)
    */
   tokenCount?: number;
-  
+
   /**
    * Whether the AI operation was successful
    */
   success: boolean;
-  
+
   /**
    * Error type if the operation failed
    */
   errorType?: string;
-  
+
   /**
    * Error message if the operation failed
    */
   errorMessage?: string;
-  
+
   /**
    * Timestamp of the AI usage
    */
   timestamp?: string;
-  
+
   /**
    * Additional metadata about the AI usage
    */
@@ -63,17 +63,17 @@ export interface AnalyticsEvent {
    * Type of event (e.g., button_click, form_submit)
    */
   eventType: string;
-  
+
   /**
    * Name of the event (e.g., ai_assist_button, report_form)
    */
   eventName: string;
-  
+
   /**
    * Timestamp of the event
    */
   timestamp: string;
-  
+
   /**
    * Additional metadata about the event
    */
@@ -88,22 +88,22 @@ interface AnalyticsData {
    * Array of tracked events
    */
   events: AnalyticsEvent[];
-  
+
   /**
    * Array of AI usage data
    */
   aiUsage: AIUsageData[];
-  
+
   /**
    * Number of user sessions
    */
   sessionCount: number;
-  
+
   /**
    * Timestamp of first visit
    */
   firstVisit: string;
-  
+
   /**
    * Timestamp of last visit
    */
@@ -119,48 +119,48 @@ const ANALYTICS_STORAGE_KEY = 'rapport-ai-analytics';
  * List of sensitive fields that should not be stored in analytics
  */
 const SENSITIVE_FIELDS = [
-  'email', 
-  'password', 
-  'token', 
-  'apiKey', 
-  'content', 
-  'promptText', 
+  'email',
+  'password',
+  'token',
+  'apiKey',
+  'content',
+  'promptText',
   'responseText',
   'userEmail',
   'userId',
   'name',
-  'phone'
+  'phone',
 ];
 
 /**
  * Get analytics data from localStorage
- * 
+ *
  * @returns Analytics data object
  */
 export const getAnalyticsData = (): AnalyticsData => {
   try {
     const storedData = localStorage.getItem(ANALYTICS_STORAGE_KEY);
-    
+
     if (!storedData) {
       return {
         events: [],
         aiUsage: [],
         sessionCount: 0,
         firstVisit: new Date().toISOString(),
-        lastVisit: new Date().toISOString()
+        lastVisit: new Date().toISOString(),
       };
     }
-    
+
     return JSON.parse(storedData);
   } catch (error) {
     console.error('Failed to retrieve analytics data:', error);
-    
+
     return {
       events: [],
       aiUsage: [],
       sessionCount: 0,
       firstVisit: new Date().toISOString(),
-      lastVisit: new Date().toISOString()
+      lastVisit: new Date().toISOString(),
     };
   }
 };
@@ -169,36 +169,38 @@ export const getAnalyticsData = (): AnalyticsData => {
 
 /**
  * Sanitize metadata to remove sensitive information
- * 
+ *
  * @param metadata Metadata object to sanitize
  * @returns Sanitized metadata object
  */
-const sanitizeMetadata = (metadata?: Record<string, unknown>): Record<string, unknown> | undefined => {
+const sanitizeMetadata = (
+  metadata?: Record<string, unknown>
+): Record<string, unknown> | undefined => {
   if (!metadata) {
     return undefined;
   }
-  
+
   const sanitized: Record<string, unknown> = {};
-  
+
   // Only include non-sensitive fields
   Object.keys(metadata).forEach(key => {
     const lowerKey = key.toLowerCase();
-    
+
     // Skip sensitive fields
     if (SENSITIVE_FIELDS.some(field => lowerKey.includes(field.toLowerCase()))) {
       return;
     }
-    
+
     // Include safe fields
     sanitized[key] = metadata[key];
   });
-  
+
   return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 };
 
 /**
  * Track a general analytics event
- * 
+ *
  * @param eventType Type of event (e.g., button_click, form_submit)
  * @param eventName Name of the event (e.g., ai_assist_button, report_form)
  * @param metadata Additional metadata about the event
@@ -211,26 +213,26 @@ export const trackEvent = (
   try {
     // Get current analytics data
     const analyticsData = getAnalyticsData();
-    
+
     // Create new event
     const event: AnalyticsEvent = {
       eventType,
       eventName,
       timestamp: new Date().toISOString(),
-      metadata: sanitizeMetadata(metadata)
+      metadata: sanitizeMetadata(metadata),
     };
-    
+
     // Add event to data
     analyticsData.events.push(event);
-    
+
     // Update last visit
     analyticsData.lastVisit = new Date().toISOString();
-    
+
     // Increment session count if it's a test
     if (analyticsData.sessionCount === 0) {
       analyticsData.sessionCount = 1;
     }
-    
+
     try {
       // Save updated data
       localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(analyticsData));
@@ -245,32 +247,32 @@ export const trackEvent = (
 
 /**
  * Track AI feature usage
- * 
+ *
  * @param usageData Data about the AI feature usage
  */
 export const trackAIUsage = (usageData: AIUsageData): void => {
   try {
     // Get current analytics data
     const analyticsData = getAnalyticsData();
-    
+
     // Create new usage data with timestamp
     const usage: AIUsageData = {
       ...usageData,
       timestamp: usageData.timestamp || new Date().toISOString(),
-      metadata: sanitizeMetadata(usageData.metadata) || {} // Ensure metadata is always an object
+      metadata: sanitizeMetadata(usageData.metadata) || {}, // Ensure metadata is always an object
     };
-    
+
     // Add usage to data
     analyticsData.aiUsage.push(usage);
-    
+
     // Update last visit
     analyticsData.lastVisit = new Date().toISOString();
-    
+
     // Increment session count if it's a test
     if (analyticsData.sessionCount === 0) {
       analyticsData.sessionCount = 1;
     }
-    
+
     try {
       // Save updated data
       localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(analyticsData));
@@ -296,7 +298,7 @@ export const clearAnalyticsData = (): void => {
 
 /**
  * Get AI usage statistics
- * 
+ *
  * @returns Statistics about AI feature usage
  */
 export const getAIUsageStats = (): {
@@ -307,62 +309,72 @@ export const getAIUsageStats = (): {
   errorRates: Record<string, number>;
 } => {
   const { aiUsage } = getAnalyticsData();
-  
+
   if (aiUsage.length === 0) {
     return {
       totalUsage: 0,
       successRate: 0,
       averageResponseTime: 0,
       usageByFeature: {},
-      errorRates: {}
+      errorRates: {},
     };
   }
-  
+
   // Calculate success rate
   const successful = aiUsage.filter(usage => usage.success).length;
   const successRate = (successful / aiUsage.length) * 100;
-  
+
   // Calculate average response time
   const responseTimes = aiUsage
     .filter(usage => typeof usage.responseTime === 'number')
     .map(usage => usage.responseTime as number);
-    
-  const averageResponseTime = responseTimes.length > 0
-    ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
-    : 0;
-  
+
+  const averageResponseTime =
+    responseTimes.length > 0
+      ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+      : 0;
+
   // Count usage by feature
-  const usageByFeature = aiUsage.reduce((counts, usage) => {
-    const { featureId } = usage;
-    counts[featureId] = (counts[featureId] || 0) + 1;
-    return counts;
-  }, {} as Record<string, number>);
-  
+  const usageByFeature = aiUsage.reduce(
+    (counts, usage) => {
+      const { featureId } = usage;
+      counts[featureId] = (counts[featureId] || 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>
+  );
+
   // Calculate error rates by type
   const errors = aiUsage.filter(usage => !usage.success);
-  const errorTypes = errors.reduce((types, usage) => {
-    const errorType = usage.errorType || 'unknown';
-    types[errorType] = (types[errorType] || 0) + 1;
-    return types;
-  }, {} as Record<string, number>);
-  
-  const errorRates = Object.entries(errorTypes).reduce((rates, [type, count]) => {
-    rates[type] = (count / aiUsage.length) * 100;
-    return rates;
-  }, {} as Record<string, number>);
-  
+  const errorTypes = errors.reduce(
+    (types, usage) => {
+      const errorType = usage.errorType || 'unknown';
+      types[errorType] = (types[errorType] || 0) + 1;
+      return types;
+    },
+    {} as Record<string, number>
+  );
+
+  const errorRates = Object.entries(errorTypes).reduce(
+    (rates, [type, count]) => {
+      rates[type] = (count / aiUsage.length) * 100;
+      return rates;
+    },
+    {} as Record<string, number>
+  );
+
   return {
     totalUsage: aiUsage.length,
     successRate,
     averageResponseTime,
     usageByFeature,
-    errorRates
+    errorRates,
   };
 };
 
 /**
  * Get event statistics
- * 
+ *
  * @returns Statistics about tracked events
  */
 export const getEventStats = (): {
@@ -371,57 +383,63 @@ export const getEventStats = (): {
   eventsByName: Record<string, number>;
 } => {
   const { events } = getAnalyticsData();
-  
+
   if (events.length === 0) {
     return {
       totalEvents: 0,
       eventsByType: {},
-      eventsByName: {}
+      eventsByName: {},
     };
   }
-  
+
   // Count events by type
-  const eventsByType = events.reduce((counts, event) => {
-    const { eventType } = event;
-    counts[eventType] = (counts[eventType] || 0) + 1;
-    return counts;
-  }, {} as Record<string, number>);
-  
+  const eventsByType = events.reduce(
+    (counts, event) => {
+      const { eventType } = event;
+      counts[eventType] = (counts[eventType] || 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>
+  );
+
   // Count events by name
-  const eventsByName = events.reduce((counts, event) => {
-    const { eventName } = event;
-    counts[eventName] = (counts[eventName] || 0) + 1;
-    return counts;
-  }, {} as Record<string, number>);
-  
+  const eventsByName = events.reduce(
+    (counts, event) => {
+      const { eventName } = event;
+      counts[eventName] = (counts[eventName] || 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>
+  );
+
   return {
     totalEvents: events.length,
     eventsByType,
-    eventsByName
+    eventsByName,
   };
 };
 
 /**
  * Initialize analytics session
- * 
+ *
  * This should be called when the application starts
  */
 export const initAnalyticsSession = (): void => {
   try {
     // Get current analytics data
     const analyticsData = getAnalyticsData();
-    
+
     // Update session count
     analyticsData.sessionCount += 1;
-    
+
     // Set first visit if not set
     if (!analyticsData.firstVisit) {
       analyticsData.firstVisit = new Date().toISOString();
     }
-    
+
     // Update last visit
     analyticsData.lastVisit = new Date().toISOString();
-    
+
     // Save updated data
     try {
       localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(analyticsData));
@@ -429,13 +447,13 @@ export const initAnalyticsSession = (): void => {
       console.error('Failed to initialize analytics session:', error);
       return;
     }
-    
+
     // Track session start event
     trackEvent('session', 'session_start', {
       sessionCount: analyticsData.sessionCount,
       userAgent: navigator.userAgent,
       screenWidth: window.innerWidth,
-      screenHeight: window.innerHeight
+      screenHeight: window.innerHeight,
     });
   } catch (error) {
     console.error('Failed to initialize analytics session:', error);
@@ -444,12 +462,15 @@ export const initAnalyticsSession = (): void => {
 
 /**
  * Start timing an AI operation
- * 
- * @param _operationId Identifier for the operation (not used internally but required by API)
+ *
+ * @param operationId Identifier for the operation (not used internally but required by API)
  * @returns Function to stop timing and track the result
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const startAIOperationTiming = (_operationId: string): {
+export const startAIOperationTiming = (
+  // We need to accept operationId for API compatibility but don't use it internally
+  // @ts-expect-error - Parameter is required by API but not used
+  operationId: string
+): {
   stopTiming: (result: {
     featureId: string;
     templateId?: string;
@@ -461,18 +482,18 @@ export const startAIOperationTiming = (_operationId: string): {
   }) => void;
 } => {
   const startTime = performance.now();
-  
+
   return {
-    stopTiming: (result) => {
+    stopTiming: result => {
       const endTime = performance.now();
       const responseTime = Math.round(endTime - startTime);
-      
+
       trackAIUsage({
         ...result,
         responseTime,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-    }
+    },
   };
 };
 
@@ -485,5 +506,5 @@ export default {
   getAIUsageStats,
   getEventStats,
   initAnalyticsSession,
-  startAIOperationTiming
+  startAIOperationTiming,
 };

@@ -12,7 +12,7 @@ interface FormData {
 
 function App() {
   const [reports, setReports] = useState<FormData[]>([]);
-  
+
   // Initialize analytics session when the app starts
   useEffect(() => {
     initAnalyticsSession();
@@ -63,7 +63,7 @@ function App() {
           <ReportForm onSubmit={handleFormSubmit} />
 
           {/* Chart Section */}
-          <PieChart 
+          <PieChart
             data={chartData}
             title="Report Categories"
             showStats={true}

@@ -23,18 +23,18 @@ export type ValidationTiming = 'immediate' | 'delayed' | 'onBlur';
  */
 export const validateRequired = (value: string, fieldName: string): ValidationResult => {
   const trimmedValue = value.trim();
-  
+
   if (trimmedValue.length === 0) {
     return {
       isValid: false,
       message: `${fieldName} is required`,
-      severity: 'error'
+      severity: 'error',
     };
   }
-  
+
   return {
     isValid: true,
-    message: ''
+    message: '',
   };
 };
 
@@ -52,10 +52,10 @@ export const validateUrl = (value: string, required = false): ValidationResult =
 
   // If required and empty, it's invalid
   if (required && !value.trim()) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       message: 'URL is required',
-      severity: 'error'
+      severity: 'error',
     };
   }
 
@@ -63,11 +63,11 @@ export const validateUrl = (value: string, required = false): ValidationResult =
   if (value.trim() && !value.includes('://')) {
     const commonDomainPattern = /^[a-zA-Z0-9][-a-zA-Z0-9]*(\.[a-zA-Z0-9][-a-zA-Z0-9]*)+/;
     if (commonDomainPattern.test(value)) {
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: 'URL is missing protocol (http:// or https://)',
         severity: 'warning',
-        suggestions: [`https://${value}`]
+        suggestions: [`https://${value}`],
       };
     }
   }
@@ -77,10 +77,10 @@ export const validateUrl = (value: string, required = false): ValidationResult =
     new URL(value);
     return { isValid: true, message: '' };
   } catch {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       message: 'Please enter a valid URL (e.g., https://example.com)',
-      severity: 'error'
+      severity: 'error',
     };
   }
 };
@@ -99,10 +99,10 @@ export const validateYear = (value: string, required = false): ValidationResult 
 
   // If required and empty, it's invalid
   if (required && !value.trim()) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       message: 'Year is required',
-      severity: 'error'
+      severity: 'error',
     };
   }
 
@@ -115,35 +115,35 @@ export const validateYear = (value: string, required = false): ValidationResult 
     // If it's a 2-digit year, suggest the full year
     if (/^\d{2}$/.test(value)) {
       const century = currentYear.toString().slice(0, 2);
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: 'Year must be a 4-digit number',
         severity: 'warning',
-        suggestions: [`${century}${value}`]
+        suggestions: [`${century}${value}`],
       };
     }
-    
-    return { 
-      isValid: false, 
+
+    return {
+      isValid: false,
       message: 'Year must be a 4-digit number',
-      severity: 'error'
+      severity: 'error',
     };
   }
 
   if (yearNum > currentYear) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       message: 'Year cannot be in the future',
-      severity: 'error'
+      severity: 'error',
     };
   }
 
   // Warn about very old years that might be typos
   if (yearNum < 1900) {
-    return { 
-      isValid: true, 
+    return {
+      isValid: true,
       message: 'This year is quite old. Please verify it is correct.',
-      severity: 'warning'
+      severity: 'warning',
     };
   }
 
@@ -163,24 +163,24 @@ export const validateMinLength = (
   fieldName: string
 ): ValidationResult => {
   const trimmedValue = value.trim();
-  
+
   if (trimmedValue.length === 0) {
     return {
       isValid: false,
       message: `${fieldName} is required`,
-      severity: 'error'
+      severity: 'error',
     };
   }
-  
+
   if (trimmedValue.length < minLength) {
     const remaining = minLength - trimmedValue.length;
     return {
       isValid: false,
       message: `${fieldName} must be at least ${minLength} characters (${remaining} more needed)`,
-      severity: 'error'
+      severity: 'error',
     };
   }
-  
+
   return { isValid: true, message: '' };
 };
 
@@ -201,20 +201,20 @@ export const validateMaxLength = (
     return {
       isValid: false,
       message: `${fieldName} must be at most ${maxLength} characters (${excess} too many)`,
-      severity: 'error'
+      severity: 'error',
     };
   }
-  
+
   // Warning when approaching the limit
   if (value.length > maxLength * 0.9) {
     const remaining = maxLength - value.length;
     return {
       isValid: true,
       message: `${remaining} characters remaining`,
-      severity: 'warning'
+      severity: 'warning',
     };
   }
-  
+
   return { isValid: true, message: '' };
 };
 
@@ -232,50 +232,50 @@ export const validateEmail = (value: string, required = false): ValidationResult
 
   // If required and empty, it's invalid
   if (required && !value.trim()) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       message: 'Email is required',
-      severity: 'error'
+      severity: 'error',
     };
   }
 
   // Basic email regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  
+
   if (!emailRegex.test(value)) {
     // Check for common mistakes
     if (value.includes(' ')) {
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: 'Email cannot contain spaces',
         severity: 'error',
-        suggestions: [value.replace(/\s+/g, '')]
+        suggestions: [value.replace(/\s+/g, '')],
       };
     }
-    
+
     if (!value.includes('@')) {
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: 'Email must contain @ symbol',
-        severity: 'error'
+        severity: 'error',
       };
     }
-    
+
     if (!value.includes('.')) {
-      return { 
-        isValid: false, 
+      return {
+        isValid: false,
         message: 'Email must contain a domain with a dot',
-        severity: 'error'
+        severity: 'error',
       };
     }
-    
-    return { 
-      isValid: false, 
+
+    return {
+      isValid: false,
       message: 'Please enter a valid email address',
-      severity: 'error'
+      severity: 'error',
     };
   }
-  
+
   return { isValid: true, message: '' };
 };
 

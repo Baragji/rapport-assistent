@@ -8,10 +8,10 @@ interface FeatureFlags {
   AI_PERFORMANCE_MONITORING: boolean;
   AI_STREAMING: boolean;
   AI_TEMPLATE_REGISTRY: boolean;
-  
+
   // UI Features
   PERFORMANCE_STATUS_DISPLAY: boolean;
-  
+
   // Development Features
   DEBUG_MODE: boolean;
   MOCK_AI_CLIENT: boolean;
@@ -26,10 +26,10 @@ const DEFAULT_FLAGS: FeatureFlags = {
   AI_PERFORMANCE_MONITORING: true,
   AI_STREAMING: true,
   AI_TEMPLATE_REGISTRY: true,
-  
+
   // UI Features
   PERFORMANCE_STATUS_DISPLAY: false, // Only show when needed
-  
+
   // Development Features
   DEBUG_MODE: import.meta.env.MODE === 'development',
   MOCK_AI_CLIENT: import.meta.env.MODE === 'test',
@@ -45,14 +45,14 @@ const ENV_OVERRIDES: Partial<FeatureFlags> = {
     MOCK_AI_CLIENT: false,
     PERFORMANCE_STATUS_DISPLAY: false,
   }),
-  
+
   // Test overrides
   ...(import.meta.env.MODE === 'test' && {
     AI_LAZY_LOADING: true, // Keep lazy loading but with mocks
     AI_PERFORMANCE_MONITORING: false, // Disable monitoring in tests
     MOCK_AI_CLIENT: true,
   }),
-  
+
   // Development overrides
   ...(import.meta.env.MODE === 'development' && {
     PERFORMANCE_STATUS_DISPLAY: true,
@@ -77,11 +77,11 @@ export function getFeatureFlag<K extends keyof FeatureFlags>(flag: K): FeatureFl
  * Set a runtime feature flag (for emergency rollbacks)
  */
 export function setFeatureFlag<K extends keyof FeatureFlags>(
-  flag: K, 
+  flag: K,
   value: FeatureFlags[K]
 ): void {
   runtimeFlags[flag] = value;
-  
+
   if (getFeatureFlag('DEBUG_MODE')) {
     console.log(`Feature flag ${flag} set to:`, value);
   }
@@ -92,11 +92,11 @@ export function setFeatureFlag<K extends keyof FeatureFlags>(
  */
 export function emergencyRollback(): void {
   console.warn('🚨 Emergency rollback activated - disabling AI optimizations');
-  
+
   setFeatureFlag('AI_LAZY_LOADING', false);
   setFeatureFlag('AI_PERFORMANCE_MONITORING', false);
   setFeatureFlag('AI_TEMPLATE_REGISTRY', false);
-  
+
   // Reload page to apply changes
   if (typeof window !== 'undefined') {
     window.location.reload();
@@ -108,12 +108,12 @@ export function emergencyRollback(): void {
  */
 export function getAllFeatureFlags(): FeatureFlags {
   const flags = {} as FeatureFlags;
-  
+
   for (const key in DEFAULT_FLAGS) {
     const flagKey = key as keyof FeatureFlags;
     flags[flagKey] = getFeatureFlag(flagKey);
   }
-  
+
   return flags;
 }
 

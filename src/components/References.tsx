@@ -11,13 +11,13 @@ interface ReferencesProps {
   onBlur?: (index: number, field: string) => void;
 }
 
-const References: React.FC<ReferencesProps> = ({ 
-  references, 
-  onChange, 
+const References: React.FC<ReferencesProps> = ({
+  references,
+  onChange,
   disabled = false,
   errors = {},
   touched = {},
-  onBlur
+  onBlur,
 }) => {
   // Default empty reference
   const emptyReference: Reference = {
@@ -109,8 +109,8 @@ const References: React.FC<ReferencesProps> = ({
       ) : (
         <div className="space-y-4">
           {references.map((reference, index) => (
-            <div 
-              key={`reference-${index}-${reference.title.substring(0, 10)}`} 
+            <div
+              key={`reference-${index}-${reference.title.substring(0, 10)}`}
               className="reference-item p-3 xs:p-4 border border-gray-200 rounded-md bg-gray-50"
               data-testid={`reference-item-${index}`}
             >
@@ -155,7 +155,10 @@ const References: React.FC<ReferencesProps> = ({
 
               <div className="grid-responsive">
                 <div className="form-group-responsive">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`title-${index}`}>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                    htmlFor={`title-${index}`}
+                  >
                     Title <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -164,7 +167,7 @@ const References: React.FC<ReferencesProps> = ({
                       type="text"
                       className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'title')}`}
                       value={reference.title}
-                      onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
+                      onChange={e => handleFieldChange(index, 'title', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'title')}
                       disabled={disabled}
                       required
@@ -174,21 +177,34 @@ const References: React.FC<ReferencesProps> = ({
                     />
                     {getValidationState(index, 'title') === 'valid' && (
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-green-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                     )}
                   </div>
-                  {touched[index]?.title && errors[index]?.title && !errors[index]?.title.isValid && (
-                    <p className="mt-1 text-sm text-red-600" id={`title-error-${index}`}>
-                      {errors[index]?.title.message}
-                    </p>
-                  )}
+                  {touched[index]?.title &&
+                    errors[index]?.title &&
+                    !errors[index]?.title.isValid && (
+                      <p className="mt-1 text-sm text-red-600" id={`title-error-${index}`}>
+                        {errors[index]?.title.message}
+                      </p>
+                    )}
                 </div>
 
                 <div className="form-group-responsive">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`author-${index}`}>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                    htmlFor={`author-${index}`}
+                  >
                     Author <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -197,7 +213,7 @@ const References: React.FC<ReferencesProps> = ({
                       type="text"
                       className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'author')}`}
                       value={reference.author}
-                      onChange={(e) => handleFieldChange(index, 'author', e.target.value)}
+                      onChange={e => handleFieldChange(index, 'author', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'author')}
                       disabled={disabled}
                       required
@@ -207,21 +223,34 @@ const References: React.FC<ReferencesProps> = ({
                     />
                     {getValidationState(index, 'author') === 'valid' && (
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-green-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                     )}
                   </div>
-                  {touched[index]?.author && errors[index]?.author && !errors[index]?.author.isValid && (
-                    <p className="mt-1 text-sm text-red-600" id={`author-error-${index}`}>
-                      {errors[index]?.author.message}
-                    </p>
-                  )}
+                  {touched[index]?.author &&
+                    errors[index]?.author &&
+                    !errors[index]?.author.isValid && (
+                      <p className="mt-1 text-sm text-red-600" id={`author-error-${index}`}>
+                        {errors[index]?.author.message}
+                      </p>
+                    )}
                 </div>
 
                 <div className="form-group-responsive">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`year-${index}`}>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                    htmlFor={`year-${index}`}
+                  >
                     Year
                   </label>
                   <div className="relative">
@@ -230,7 +259,7 @@ const References: React.FC<ReferencesProps> = ({
                       type="text"
                       className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'year')}`}
                       value={reference.year ?? ''}
-                      onChange={(e) => handleFieldChange(index, 'year', e.target.value)}
+                      onChange={e => handleFieldChange(index, 'year', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'year')}
                       placeholder="YYYY"
                       disabled={disabled}
@@ -240,8 +269,16 @@ const References: React.FC<ReferencesProps> = ({
                     />
                     {getValidationState(index, 'year') === 'valid' && (
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-green-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                     )}
@@ -254,7 +291,10 @@ const References: React.FC<ReferencesProps> = ({
                 </div>
 
                 <div className="form-group-responsive">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`type-${index}`}>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                    htmlFor={`type-${index}`}
+                  >
                     Type <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -262,7 +302,9 @@ const References: React.FC<ReferencesProps> = ({
                       id={`type-${index}`}
                       className={`touch-friendly-select input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'type')}`}
                       value={reference.type}
-                      onChange={(e) => handleFieldChange(index, 'type', e.target.value as Reference['type'])}
+                      onChange={e =>
+                        handleFieldChange(index, 'type', e.target.value as Reference['type'])
+                      }
                       onBlur={() => handleFieldBlur(index, 'type')}
                       disabled={disabled}
                       data-testid={`type-select-${index}`}
@@ -278,8 +320,16 @@ const References: React.FC<ReferencesProps> = ({
                     </select>
                     {getValidationState(index, 'type') === 'valid' && (
                       <div className="absolute inset-y-0 right-0 flex items-center pr-8 pointer-events-none">
-                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-green-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                     )}
@@ -292,7 +342,10 @@ const References: React.FC<ReferencesProps> = ({
                 </div>
 
                 <div className="form-group-responsive">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`publisher-${index}`}>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                    htmlFor={`publisher-${index}`}
+                  >
                     Publisher
                   </label>
                   <div className="relative">
@@ -301,7 +354,7 @@ const References: React.FC<ReferencesProps> = ({
                       type="text"
                       className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'publisher')}`}
                       value={reference.publisher ?? ''}
-                      onChange={(e) => handleFieldChange(index, 'publisher', e.target.value)}
+                      onChange={e => handleFieldChange(index, 'publisher', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'publisher')}
                       disabled={disabled}
                       data-testid={`publisher-input-${index}`}
@@ -310,21 +363,34 @@ const References: React.FC<ReferencesProps> = ({
                     />
                     {getValidationState(index, 'publisher') === 'valid' && (
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-green-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                     )}
                   </div>
-                  {touched[index]?.publisher && errors[index]?.publisher && !errors[index]?.publisher.isValid && (
-                    <p className="mt-1 text-sm text-red-600" id={`publisher-error-${index}`}>
-                      {errors[index]?.publisher.message}
-                    </p>
-                  )}
+                  {touched[index]?.publisher &&
+                    errors[index]?.publisher &&
+                    !errors[index]?.publisher.isValid && (
+                      <p className="mt-1 text-sm text-red-600" id={`publisher-error-${index}`}>
+                        {errors[index]?.publisher.message}
+                      </p>
+                    )}
                 </div>
 
                 <div className="form-group-responsive">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`url-${index}`}>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                    htmlFor={`url-${index}`}
+                  >
                     URL
                   </label>
                   <div className="relative">
@@ -333,7 +399,7 @@ const References: React.FC<ReferencesProps> = ({
                       type="url"
                       className={`input-responsive w-full border rounded-md focus:outline-none focus:ring-2 ${getValidationClass(index, 'url')}`}
                       value={reference.url ?? ''}
-                      onChange={(e) => handleFieldChange(index, 'url', e.target.value)}
+                      onChange={e => handleFieldChange(index, 'url', e.target.value)}
                       onBlur={() => handleFieldBlur(index, 'url')}
                       placeholder="https://example.com"
                       disabled={disabled}
@@ -343,8 +409,16 @@ const References: React.FC<ReferencesProps> = ({
                     />
                     {getValidationState(index, 'url') === 'valid' && (
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-green-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                     )}

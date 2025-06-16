@@ -11,10 +11,10 @@ export const AIErrorType = {
   INVALID_REQUEST: 'invalid_request_error',
   NETWORK: 'network_error',
   UNKNOWN: 'unknown_error',
-  STREAM_ERROR: 'stream_error'
+  STREAM_ERROR: 'stream_error',
 } as const;
 
-export type AIErrorTypeValue = typeof AIErrorType[keyof typeof AIErrorType];
+export type AIErrorTypeValue = (typeof AIErrorType)[keyof typeof AIErrorType];
 
 /**
  * Custom error class for AI operations
@@ -25,8 +25,8 @@ export class AIError extends Error {
   originalError?: unknown;
 
   constructor(
-    message: string, 
-    type: AIErrorTypeValue = AIErrorType.UNKNOWN, 
+    message: string,
+    type: AIErrorTypeValue = AIErrorType.UNKNOWN,
     retryable = false,
     originalError?: unknown
   ) {
@@ -63,7 +63,7 @@ export type StreamCallback = (chunk: string, progress: number) => void;
 export class AIClient {
   private client: OpenAI;
   private config: Required<AIClientConfig>;
-  
+
   /**
    * Default configuration values
    */
@@ -74,9 +74,9 @@ export class AIClient {
     retryDelay: 1000,
     timeout: 30000,
     temperature: 0.7,
-    maxTokens: 1000
+    maxTokens: 1000,
   };
-  
+
   /**
    * Initialize the OpenAI client with API key from environment variables
    */
@@ -85,20 +85,24 @@ export class AIClient {
     this.config = {
       ...AIClient.DEFAULT_CONFIG,
       ...config,
-      apiKey: config.apiKey !== undefined ? config.apiKey : (import.meta.env.VITE_OPENAI_API_KEY || AIClient.DEFAULT_CONFIG.apiKey)
+      apiKey:
+        config.apiKey !== undefined
+          ? config.apiKey
+          : import.meta.env.VITE_OPENAI_API_KEY || AIClient.DEFAULT_CONFIG.apiKey,
     };
-    
+
     if (!this.config.apiKey || this.config.apiKey.trim() === '') {
       console.error('OpenAI API key is missing. Please set VITE_OPENAI_API_KEY in your .env file.');
     }
-    
+
     this.client = new OpenAI({
       apiKey: this.config.apiKey || 'dummy-key-for-development',
       timeout: this.config.timeout,
-      dangerouslyAllowBrowser: import.meta.env.MODE === 'test' || import.meta.env.VITE_ALLOW_BROWSER === 'true',
+      dangerouslyAllowBrowser:
+        import.meta.env.MODE === 'test' || import.meta.env.VITE_ALLOW_BROWSER === 'true',
     });
   }
-  
+
   /**
    * Generate content using OpenAI's completion API with retry logic
    * @param prompt The prompt to send to the API
@@ -107,15 +111,11 @@ export class AIClient {
    */
   async generateContent(prompt: string): Promise<string> {
     if (!prompt || prompt.trim() === '') {
-      throw new AIError(
-        'Prompt cannot be empty',
-        AIErrorType.INVALID_REQUEST,
-        false
-      );
+      throw new AIError('Prompt cannot be empty', AIErrorType.INVALID_REQUEST, false);
     }
-    
+
     let lastError: AIError | null = null;
-    
+
     // Try the request up to maxRetries times
     for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
       try {
@@ -124,48 +124,49 @@ export class AIClient {
           const delay = this.config.retryDelay * Math.pow(2, attempt - 1);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
-        
+
         const response = await this.client.chat.completions.create({
           model: this.config.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: this.config.temperature,
           max_tokens: this.config.maxTokens,
         });
-        
+
         // Check if we have a valid response with choices
         if (!response.choices || response.choices.length === 0) {
-          throw new AIError(
-            'Received empty response from OpenAI',
-            AIErrorType.UNKNOWN,
-            true
-          );
+          throw new AIError('Received empty response from OpenAI', AIErrorType.UNKNOWN, true);
         }
-        
+
         // Get the content (which might be an empty string, but that's valid)
         const content = response.choices[0]?.message?.content ?? '';
-        
+
         return content;
       } catch (error) {
         lastError = this.handleError(error);
-        
+
         // If the error is not retryable, break immediately
         if (!lastError.retryable) {
           break;
         }
-        
+
         // Log retry attempt
-        console.warn(`Retry attempt ${attempt + 1}/${this.config.maxRetries} after error: ${lastError.message}`);
+        console.warn(
+          `Retry attempt ${attempt + 1}/${this.config.maxRetries} after error: ${lastError.message}`
+        );
       }
     }
-    
+
     // If we've exhausted all retries or had a non-retryable error
-    throw lastError || new AIError(
-      'Failed to generate AI content after multiple attempts',
-      AIErrorType.UNKNOWN,
-      false
+    throw (
+      lastError ||
+      new AIError(
+        'Failed to generate AI content after multiple attempts',
+        AIErrorType.UNKNOWN,
+        false
+      )
     );
   }
-  
+
   /**
    * Generate content using OpenAI's streaming API
    * @param prompt The prompt to send to the API
@@ -175,16 +176,12 @@ export class AIClient {
    */
   async generateContentStream(prompt: string, onStream?: StreamCallback): Promise<string> {
     if (!prompt || prompt.trim() === '') {
-      throw new AIError(
-        'Prompt cannot be empty',
-        AIErrorType.INVALID_REQUEST,
-        false
-      );
+      throw new AIError('Prompt cannot be empty', AIErrorType.INVALID_REQUEST, false);
     }
-    
+
     let lastError: AIError | null = null;
     let fullContent = '';
-    
+
     // Try the request up to maxRetries times
     for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
       try {
@@ -193,10 +190,10 @@ export class AIClient {
           const delay = this.config.retryDelay * Math.pow(2, attempt - 1);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
-        
+
         // Reset content for retry attempts
         fullContent = '';
-        
+
         // Create a streaming completion
         const stream = await this.client.chat.completions.create({
           model: this.config.model,
@@ -205,58 +202,60 @@ export class AIClient {
           max_tokens: this.config.maxTokens,
           stream: true,
         });
-        
+
         // Process the stream
         let tokenCount = 0;
         const estimatedTotalTokens = this.config.maxTokens / 2; // Initial estimate
-        
+
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content || '';
-          
+
           if (content) {
             fullContent += content;
             tokenCount += 1;
-            
+
             // Calculate progress (0-100)
-            const progress = Math.min(
-              Math.round((tokenCount / estimatedTotalTokens) * 100), 
-              99
-            ); // Cap at 99% until complete
-            
+            const progress = Math.min(Math.round((tokenCount / estimatedTotalTokens) * 100), 99); // Cap at 99% until complete
+
             // Call the stream callback if provided
             if (onStream) {
               onStream(content, progress);
             }
           }
         }
-        
+
         // Final progress update
         if (onStream) {
           onStream('', 100);
         }
-        
+
         return fullContent;
       } catch (error) {
         lastError = this.handleError(error);
-        
+
         // If the error is not retryable, break immediately
         if (!lastError.retryable) {
           break;
         }
-        
+
         // Log retry attempt
-        console.warn(`Retry attempt ${attempt + 1}/${this.config.maxRetries} after error: ${lastError.message}`);
+        console.warn(
+          `Retry attempt ${attempt + 1}/${this.config.maxRetries} after error: ${lastError.message}`
+        );
       }
     }
-    
+
     // If we've exhausted all retries or had a non-retryable error
-    throw lastError || new AIError(
-      'Failed to generate streaming AI content after multiple attempts',
-      AIErrorType.STREAM_ERROR,
-      false
+    throw (
+      lastError ||
+      new AIError(
+        'Failed to generate streaming AI content after multiple attempts',
+        AIErrorType.STREAM_ERROR,
+        false
+      )
     );
   }
-  
+
   /**
    * Classify and handle errors from the OpenAI API
    * @param error The error from the API call
@@ -267,10 +266,10 @@ export class AIClient {
     if (error instanceof Error) {
       // Cast to unknown first, then to a type with status property
       const errorObj = error as unknown as { status?: number; message: string; type?: string };
-      
+
       // Handle OpenAI API errors
       const status = errorObj.status;
-      
+
       if (status === 401 || status === 403) {
         return new AIError(
           'Authentication error: Please check your API key',
@@ -279,7 +278,7 @@ export class AIClient {
           error
         );
       }
-      
+
       if (status === 429) {
         return new AIError(
           'Rate limit exceeded: Too many requests',
@@ -288,7 +287,7 @@ export class AIClient {
           error
         );
       }
-      
+
       if (status !== undefined && status >= 500) {
         return new AIError(
           'OpenAI server error: Please try again later',
@@ -297,8 +296,12 @@ export class AIClient {
           error
         );
       }
-      
-      if (status === 408 || error.message.includes('timeout') || error.message.includes('timed out')) {
+
+      if (
+        status === 408 ||
+        error.message.includes('timeout') ||
+        error.message.includes('timed out')
+      ) {
         return new AIError(
           'Request timed out: Please try again later',
           AIErrorType.TIMEOUT,
@@ -306,7 +309,7 @@ export class AIClient {
           error
         );
       }
-      
+
       if (status === 400) {
         return new AIError(
           'Invalid request: ' + error.message,
@@ -315,7 +318,7 @@ export class AIClient {
           error
         );
       }
-      
+
       // Network errors are generally retryable
       if (error.message.includes('network') || error.message.includes('connection')) {
         return new AIError(
@@ -325,7 +328,7 @@ export class AIClient {
           error
         );
       }
-      
+
       // Streaming errors
       if (error.message.includes('stream') || errorObj.type === 'stream_error') {
         return new AIError(
@@ -336,7 +339,7 @@ export class AIClient {
         );
       }
     }
-    
+
     // Default case for unknown errors
     return new AIError(
       error instanceof Error ? error.message : 'Unknown error occurred',
@@ -345,7 +348,7 @@ export class AIClient {
       error
     );
   }
-  
+
   /**
    * Check if the API key is valid and the service is available
    * @returns True if the service is available

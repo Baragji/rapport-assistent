@@ -7,7 +7,9 @@ vi.mock('./components/ReportForm', () => ({
   default: ({ onSubmit }: { onSubmit: (data: Record<string, unknown>) => void }) => (
     <div data-testid="report-form">
       <h2>Create New Report</h2>
-      <button onClick={() => onSubmit({ title: 'Test', content: 'Test content', category: 'Technical' })}>
+      <button
+        onClick={() => onSubmit({ title: 'Test', content: 'Test content', category: 'Technical' })}
+      >
         Submit
       </button>
     </div>
@@ -23,7 +25,9 @@ describe('App Component', () => {
   it('renders the header correctly', () => {
     render(<App />);
     expect(screen.getByText('Rapport Assistent')).toBeInTheDocument();
-    expect(screen.getByText('Create, manage, and visualize your reports with ease')).toBeInTheDocument();
+    expect(
+      screen.getByText('Create, manage, and visualize your reports with ease')
+    ).toBeInTheDocument();
   });
 
   it('renders the form section', () => {

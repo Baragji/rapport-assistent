@@ -18,7 +18,7 @@ export const templateRegistry: PromptTemplate[] = [
   introductionTemplate as PromptTemplate,
   methodologyTemplate as PromptTemplate,
   redThreadTemplate as PromptTemplate,
-  
+
   // Fallback hardcoded templates for critical functionality
   {
     id: 'analysis-data',
@@ -40,10 +40,10 @@ Use clear, objective language and support all claims with evidence from the data
     exampleInput: {
       topic: 'user behavior analysis',
       researchQuestion: 'How do users interact with the interface?',
-      dataPoints: 'Click rates, time on page, conversion metrics'
-    }
+      dataPoints: 'Click rates, time on page, conversion metrics',
+    },
   },
-  
+
   {
     id: 'improve-clarity',
     name: 'Improve Text Clarity',
@@ -64,9 +64,9 @@ Please:
 
 Provide the improved version that is clearer and more engaging while preserving the academic integrity.`,
     exampleInput: {
-      originalText: 'The research showed results that were significant.'
-    }
-  }
+      originalText: 'The research showed results that were significant.',
+    },
+  },
 ];
 
 /**

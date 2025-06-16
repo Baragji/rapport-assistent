@@ -4,7 +4,7 @@ import {
   validateUrl,
   validateYear,
   validateMinLength,
-  validateReference
+  validateReference,
 } from '../validationUtils';
 
 describe('validationUtils', () => {
@@ -40,7 +40,7 @@ describe('validationUtils', () => {
       expect(validateYear('2020').isValid).toBe(true);
       expect(validateYear('202').isValid).toBe(false); // Not 4 digits
       expect(validateYear('20201').isValid).toBe(false); // More than 4 digits
-      
+
       const currentYear = new Date().getFullYear();
       const futureYear = (currentYear + 1).toString();
       expect(validateYear(futureYear).isValid).toBe(false); // Future year
@@ -74,11 +74,11 @@ describe('validationUtils', () => {
         year: '2020',
         url: 'https://example.com',
         publisher: 'Test Publisher',
-        type: 'Article'
+        type: 'Article',
       };
-      
+
       const result = validateReference(reference);
-      
+
       expect(result.title.isValid).toBe(true);
       expect(result.author.isValid).toBe(true);
       expect(result.year.isValid).toBe(true);
@@ -90,11 +90,11 @@ describe('validationUtils', () => {
       const reference = {
         title: 'Test Title',
         author: 'Test Author',
-        type: 'Article'
+        type: 'Article',
       };
-      
+
       const result = validateReference(reference);
-      
+
       expect(result.title.isValid).toBe(true);
       expect(result.author.isValid).toBe(true);
       expect(result.year.isValid).toBe(true); // Optional field, empty is valid
@@ -108,11 +108,11 @@ describe('validationUtils', () => {
         author: '',
         year: '2030', // Future year
         url: 'not-a-url',
-        type: ''
+        type: '',
       };
-      
+
       const result = validateReference(reference);
-      
+
       expect(result.title.isValid).toBe(false);
       expect(result.author.isValid).toBe(false);
       expect(result.year.isValid).toBe(false);

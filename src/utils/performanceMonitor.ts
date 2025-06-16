@@ -30,7 +30,7 @@ class PerformanceMonitor {
     this.metrics.set(name, {
       name,
       startTime: performance.now(),
-      metadata
+      metadata,
     });
   }
 
@@ -46,9 +46,10 @@ class PerformanceMonitor {
 
     metric.endTime = performance.now();
     metric.duration = metric.endTime - metric.startTime;
-    
+
     // Log slow operations
-    if (metric.duration > 5000) { // 5 seconds
+    if (metric.duration > 5000) {
+      // 5 seconds
       console.warn(`Slow operation detected: ${name} took ${metric.duration.toFixed(2)}ms`);
     }
 
@@ -75,7 +76,7 @@ class PerformanceMonitor {
       duration,
       success,
       error,
-      tokenCount
+      tokenCount,
     };
 
     this.aiMetrics.push(metric);
@@ -107,7 +108,7 @@ class PerformanceMonitor {
         successRate: 0,
         averageDuration: 0,
         errorRate: 0,
-        slowOperations: 0
+        slowOperations: 0,
       };
     }
 
@@ -120,7 +121,7 @@ class PerformanceMonitor {
       successRate: (successful / this.aiMetrics.length) * 100,
       averageDuration: totalDuration / this.aiMetrics.length,
       errorRate: ((this.aiMetrics.length - successful) / this.aiMetrics.length) * 100,
-      slowOperations: slowOps
+      slowOperations: slowOps,
     };
   }
 
@@ -173,7 +174,7 @@ class PerformanceMonitor {
       timestamp: Date.now(),
       aiMetrics: [...this.aiMetrics],
       systemHealth: this.getSystemHealth(),
-      stats: this.getAIStats()
+      stats: this.getAIStats(),
     };
   }
 

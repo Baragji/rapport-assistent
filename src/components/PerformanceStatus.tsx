@@ -47,8 +47,12 @@ const PerformanceStatus = ({ className = '', showDetails = false }: PerformanceS
 
   return (
     <div className={`performance-status ${className}`}>
-      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(health.status)}`}>
-        <div className={`w-2 h-2 rounded-full mr-2 ${health.status === 'healthy' ? 'bg-green-500' : health.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+      <div
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(health.status)}`}
+      >
+        <div
+          className={`w-2 h-2 rounded-full mr-2 ${health.status === 'healthy' ? 'bg-green-500' : health.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'}`}
+        ></div>
         AI System: {health.status}
       </div>
 
@@ -66,7 +70,9 @@ const PerformanceStatus = ({ className = '', showDetails = false }: PerformanceS
       {health.issues.length > 0 && (
         <div className="mt-2 text-xs">
           {health.issues.map((issue, index) => (
-            <div key={index} className="text-red-600">⚠ {issue}</div>
+            <div key={index} className="text-red-600">
+              ⚠ {issue}
+            </div>
           ))}
         </div>
       )}
@@ -74,7 +80,9 @@ const PerformanceStatus = ({ className = '', showDetails = false }: PerformanceS
       {health.recommendations.length > 0 && showDetails && (
         <div className="mt-2 text-xs">
           {health.recommendations.map((rec, index) => (
-            <div key={index} className="text-blue-600">💡 {rec}</div>
+            <div key={index} className="text-blue-600">
+              💡 {rec}
+            </div>
           ))}
         </div>
       )}

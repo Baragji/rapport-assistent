@@ -4,11 +4,20 @@
 
 export type ChartType = 'pie' | 'bar' | 'line' | 'doughnut';
 
-export type EasingType = 
-  'linear' | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad' | 
-  'easeInCubic' | 'easeOutCubic' | 'easeInOutCubic' | 
-  'easeInQuart' | 'easeOutQuart' | 'easeInOutQuart' | 
-  'easeInQuint' | 'easeOutQuint' | 'easeInOutQuint';
+export type EasingType =
+  | 'linear'
+  | 'easeInQuad'
+  | 'easeOutQuad'
+  | 'easeInOutQuad'
+  | 'easeInCubic'
+  | 'easeOutCubic'
+  | 'easeInOutCubic'
+  | 'easeInQuart'
+  | 'easeOutQuart'
+  | 'easeInOutQuart'
+  | 'easeInQuint'
+  | 'easeOutQuint'
+  | 'easeInOutQuint';
 
 export interface ChartDataset {
   label: string;

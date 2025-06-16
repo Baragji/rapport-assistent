@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
+    "analyze": "vite build --mode analyze",
+    "build:prod": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@rjsf/core": "^5.24.11",
@@ -51,6 +53,7 @@
     "postcss": "^8.5.5",
     "prettier": "^3.5.3",
     "tailwindcss": "^4.1.10",
+    "terser": "^5.42.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5",

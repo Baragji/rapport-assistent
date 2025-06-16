@@ -10,10 +10,10 @@ export const TemplateCategory = {
   ANALYSIS: 'analysis',
   CONCLUSION: 'conclusion',
   REFERENCES: 'references',
-  GENERAL: 'general'
+  GENERAL: 'general',
 } as const;
 
-export type TemplateCategoryType = typeof TemplateCategory[keyof typeof TemplateCategory];
+export type TemplateCategoryType = (typeof TemplateCategory)[keyof typeof TemplateCategory];
 
 /**
  * Interface for prompt template metadata
@@ -49,7 +49,7 @@ export interface TemplateParams {
 export class PromptService {
   private templates: Map<string, PromptTemplate> = new Map();
   private aiClient: AIClient;
-  
+
   /**
    * Initialize the prompt service with the AI client
    */
@@ -57,7 +57,7 @@ export class PromptService {
     this.aiClient = aiClient;
     this.loadDefaultTemplates();
   }
-  
+
   /**
    * Load the default templates into the service
    */
@@ -67,7 +67,7 @@ export class PromptService {
       this.templates.set(template.id, template);
     }
   }
-  
+
   /**
    * Register a new template or update an existing one
    * @param template The template to register
@@ -78,11 +78,11 @@ export class PromptService {
       console.error('Template must have an ID and template text');
       return false;
     }
-    
+
     this.templates.set(template.id, template);
     return true;
   }
-  
+
   /**
    * Get a template by ID
    * @param id The template ID
@@ -91,7 +91,7 @@ export class PromptService {
   getTemplate(id: string): PromptTemplate | undefined {
     return this.templates.get(id);
   }
-  
+
   /**
    * Get all templates
    * @returns Array of all templates
@@ -99,7 +99,7 @@ export class PromptService {
   getAllTemplates(): PromptTemplate[] {
     return Array.from(this.templates.values());
   }
-  
+
   /**
    * Get templates by category
    * @param category The template category
@@ -108,7 +108,7 @@ export class PromptService {
   getTemplatesByCategory(category: TemplateCategoryType): PromptTemplate[] {
     return this.getAllTemplates().filter(template => template.category === category);
   }
-  
+
   /**
    * Get templates by tag
    * @param tag The tag to filter by
@@ -117,7 +117,7 @@ export class PromptService {
   getTemplatesByTag(tag: string): PromptTemplate[] {
     return this.getAllTemplates().filter(template => template.tags.includes(tag));
   }
-  
+
   /**
    * Fill a template with parameters
    * @param templateId The template ID
@@ -130,9 +130,9 @@ export class PromptService {
       console.error(`Template with ID ${templateId} not found`);
       return null;
     }
-    
+
     let filledTemplate = template.template;
-    
+
     // Replace all parameters in the template
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
@@ -140,16 +140,16 @@ export class PromptService {
         filledTemplate = filledTemplate.replace(regex, String(value));
       }
     }
-    
+
     // Check if there are any unreplaced parameters
     const unreplacedParams = filledTemplate.match(/{{[^}]+}}/g);
     if (unreplacedParams) {
       console.warn(`Some parameters were not replaced: ${unreplacedParams.join(', ')}`);
     }
-    
+
     return filledTemplate;
   }
-  
+
   /**
    * Generate content using a template and the AI client
    * @param templateId The template ID
@@ -159,7 +159,7 @@ export class PromptService {
    * @returns The generated content or null if failed
    */
   async generateContent(
-    templateId: string, 
+    templateId: string,
     params: TemplateParams,
     streaming = false,
     onStream?: (chunk: string, progress: number) => void
@@ -168,16 +168,16 @@ export class PromptService {
     if (!filledTemplate) {
       return null;
     }
-    
+
     try {
       let content: string;
-      
+
       if (streaming && onStream) {
         content = await this.aiClient.generateContentStream(filledTemplate, onStream);
       } else {
         content = await this.aiClient.generateContent(filledTemplate);
       }
-      
+
       return content;
     } catch (error) {
       console.error('Error generating content from template:', error);
@@ -192,10 +192,11 @@ const createAIClient = () => {
   if (import.meta.env.MODE === 'test') {
     // Return a minimal mock for tests
     return {
-      generateContent: async (prompt: string) => `Generated content for: ${prompt.substring(0, 20)}...`
+      generateContent: async (prompt: string) =>
+        `Generated content for: ${prompt.substring(0, 20)}...`,
     } as AIClient;
   }
-  
+
   // For production/development, use the real client
   return new AIClient();
 };

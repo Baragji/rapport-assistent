@@ -1,4 +1,8 @@
-import { TemplateCategory, type PromptTemplate, type TemplateCategoryType } from '../services/promptService';
+import {
+  TemplateCategory,
+  type PromptTemplate,
+  type TemplateCategoryType,
+} from '../services/promptService';
 
 /**
  * Interface for JSON template files
@@ -27,7 +31,7 @@ export class TemplateLoader {
   static loadFromJson(templateJson: string): PromptTemplate {
     try {
       const templateData = JSON.parse(templateJson) as TemplateFile;
-      
+
       // Validate required fields
       if (!templateData.id) {
         throw new Error('Template ID is required');
@@ -44,10 +48,10 @@ export class TemplateLoader {
       if (!templateData.template) {
         throw new Error('Template content is required');
       }
-      
+
       // Convert string category to enum
       const category = this.stringToCategoryEnum(templateData.category);
-      
+
       return {
         id: templateData.id,
         name: templateData.name,
@@ -57,23 +61,24 @@ export class TemplateLoader {
         tags: templateData.tags || [],
         template: templateData.template,
         exampleInput: templateData.exampleInput,
-        exampleOutput: templateData.exampleOutput
+        exampleOutput: templateData.exampleOutput,
       };
     } catch (error) {
       // Re-throw validation errors directly
-      if (error instanceof Error && 
-          (error.message.includes('required') || 
-           error.message.includes('Template'))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('required') || error.message.includes('Template'))
+      ) {
         console.error('Template validation error:', error);
         throw error;
       }
-      
+
       // For other errors (like JSON parsing), use the generic message
       console.error('Error loading template from JSON:', error);
       throw new Error('Failed to load template from JSON');
     }
   }
-  
+
   /**
    * Convert a string category to the TemplateCategory type
    * @param category The category string
@@ -83,7 +88,7 @@ export class TemplateLoader {
     if (!category) {
       return TemplateCategory.GENERAL;
     }
-    
+
     switch (category.toLowerCase()) {
       case 'introduction':
         return TemplateCategory.INTRODUCTION;
@@ -100,7 +105,7 @@ export class TemplateLoader {
         return TemplateCategory.GENERAL;
     }
   }
-  
+
   /**
    * Load multiple templates from JSON files
    * @param templateJsonArray Array of JSON strings
@@ -108,7 +113,7 @@ export class TemplateLoader {
    */
   static loadMultipleFromJson(templateJsonArray: string[]): PromptTemplate[] {
     const templates: PromptTemplate[] = [];
-    
+
     for (const json of templateJsonArray) {
       try {
         const template = this.loadFromJson(json);
@@ -118,7 +123,7 @@ export class TemplateLoader {
         throw error;
       }
     }
-    
+
     return templates;
   }
 }

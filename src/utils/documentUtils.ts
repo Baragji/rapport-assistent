@@ -14,15 +14,19 @@ export const convertMarkdownToDocx = async (
   try {
     // Parse markdown to MDAST (Markdown Abstract Syntax Tree)
     const mdast = unified().use(remarkParse).parse(markdown);
-    
+
     // Convert MDAST to DOCX using md-to-docx library
-    const docxBlob = await toDocx(mdast, {
-      title: fileName,
-      creator: 'Rapport Assistent',
-      description: 'Generated report document',
-      subject: 'Report',
-    }, {});
-    
+    const docxBlob = await toDocx(
+      mdast,
+      {
+        title: fileName,
+        creator: 'Rapport Assistent',
+        description: 'Generated report document',
+        subject: 'Report',
+      },
+      {}
+    );
+
     // Create a download link and trigger download
     const url = URL.createObjectURL(docxBlob as Blob);
     const a = document.createElement('a');
@@ -30,13 +34,13 @@ export const convertMarkdownToDocx = async (
     a.download = `${fileName}.docx`;
     document.body.appendChild(a);
     a.click();
-    
+
     // Clean up
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }, 0);
-    
+
     return docxBlob as Blob;
   } catch (error) {
     console.error('Error converting markdown to DOCX:', error);
@@ -54,14 +58,14 @@ export const isValidMarkdown = (markdown: string): boolean => {
   if (!markdown || typeof markdown !== 'string') {
     return false;
   }
-  
+
   // Check for common markdown patterns
   const headingPattern = /^#{1,6}\s.+$/m;
   const listPattern = /^[-*+]\s.+$/m;
   const codeBlockPattern = /```[\s\S]*?```/;
   const linkPattern = /\[.+\]\(.+\)/;
   const emphasisPattern = /(\*\*|__).+(\*\*|__)/;
-  
+
   return (
     headingPattern.test(markdown) ||
     listPattern.test(markdown) ||
@@ -90,21 +94,21 @@ export interface Reference {
  */
 export const formatReference = (reference: Reference): string => {
   let formattedRef = `${reference.author}`;
-  
+
   if (reference.year) {
     formattedRef += ` (${reference.year})`;
   }
-  
+
   formattedRef += `. *${reference.title}*`;
-  
+
   if (reference.publisher) {
     formattedRef += `. ${reference.publisher}`;
   }
-  
+
   if (reference.url) {
     formattedRef += `. Retrieved from [${reference.url}](${reference.url})`;
   }
-  
+
   return formattedRef;
 };
 
@@ -123,7 +127,7 @@ export const generateMarkdownReport = (
   references: Reference[] = []
 ): string => {
   const date = new Date().toLocaleDateString();
-  
+
   let report = `# ${title}
 
 ## Category: ${category}
@@ -138,17 +142,17 @@ ${content}`;
 
 ## References
 `;
-    
+
     references.forEach((reference, index) => {
       report += `${index + 1}. ${formatReference(reference)}\n`;
     });
   }
-  
+
   report += `
 
 ---
 *Generated with Rapport Assistent*
 `;
-  
+
   return report;
 };

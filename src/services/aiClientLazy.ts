@@ -20,7 +20,7 @@ export async function getAIClient(config?: AIClientConfig): Promise<AIClient> {
   // Dynamic import to split the OpenAI SDK into a separate chunk
   const { AIClient } = await import('./aiClient');
   aiClientInstance = new AIClient(config);
-  
+
   return aiClientInstance;
 }
 
